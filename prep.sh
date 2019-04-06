@@ -9,11 +9,11 @@ fi
 
 apt-get install debootstrap
 
-debootstrap	\
-	--verbose 
-	--variant=minbase
-	--arch=amd64
-	stretch ./node 
+debootstrap				\
+	--verbose			\
+	--variant=minbase		\
+	--arch=amd64			\
+	stretch ./node 			\
 	http://ftp.pl.debian.org/debian
 
 
