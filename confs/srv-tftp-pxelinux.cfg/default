@@ -1,0 +1,29 @@
+DEFAULT menu.c32
+PROMPT 0
+TIMEOUT 10
+
+MENU TITLE Dante Cluster Node Loader
+
+LABEL MainMenu
+    MENU LABEL ^Menu glowne
+    KERNEL menu.c32
+
+LABEL linux-1
+#    MENU DEFAULT
+    MENU LABEL vmlinuz-4.9.0-8-amd64 initrd.img-4.9.0-8-amd64
+    KERNEL kernel/vmlinuz-4.9.0-8-amd64
+    APPEND initrd=kernel/initrd.img-4.9.0-8-amd64 root=/dev/sda ro single
+
+LABEL linux-2
+    MENU DEFAULT
+    MENU LABEL vmlinuz-4.9.0-8-amd64 + zmodyfikownany initramfs
+    KERNEL kernel/vmlinuz-4.9.0-8-amd64
+    APPEND initrd=kernel/initramfs.igz
+
+LABEL linux-3
+    MENU DEFAULT
+    MENU LABEL vmlinuz-4.9.0-8-amd64 + DEBIRF
+    KERNEL kernel/vmlinuz
+    APPEND initrd=kernel/initrd
+
+
