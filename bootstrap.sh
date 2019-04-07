@@ -24,6 +24,7 @@ set -e
 . diskless-lib
 
 IMAGEDIR=False
+SKIP_DEBOOTSTRAP=False
 
 while getopts ":d:" opt; do
 	case  $opt in
@@ -46,21 +47,24 @@ done
 
 # include_packages should be one package per column
 # replace "\n" with "," then remove the last "," to feed it to debootstraps --include
-INCLUDE_PACKAGES=$(awk 1 ORS="," config/include_packages | sed -e 's/,$//' -e 's/\ //')
+#INCLUDE_PACKAGES=$(awk 1 ORS="," config/include_packages | sed -e 's/,$//' -e 's/\ //')
 
 if [ ! $IMAGEDIR = "False" ] ; then
-	echo "debootstrap to $IMAGEDIR"
 
-	debootstrap --variant=minbase --components=main,contrib,non-free --arch=amd64 \
-	    --include=$INCLUDE_PACKAGES \
-		stretch $IMAGEDIR http://ftp.us.debian.org/debian  | tee  debootstrap.log
+	if [ $SKIP_DEBOOTSTRAP == "False" ] ; then
+		echo "debootstrap to $IMAGEDIR"
 
-	RETV=$?
-	if [ $RETV -ne 0 ]; then
-	    echo "debootstrap status: failed: $RETV"
-	    exit 1
-	else
-	    echo "debootstrap status: success!"
+		debootstrap --variant=minbase --components=main,contrib,non-free --arch=amd64 \
+	    	--include=systemd,systemd-sysv \
+			stretch $IMAGEDIR http://ftp.us.debian.org/debian  | tee  debootstrap.log
+
+		RETV=$?
+		if [ $RETV -ne 0 ]; then
+	    	echo "debootstrap status: failed: $RETV"
+		    exit 1
+		else
+	    	echo "debootstrap status: success!"
+		fi
 	fi
 
 	install files/etc_fstab $IMAGEDIR/etc/fstab
@@ -68,6 +72,13 @@ if [ ! $IMAGEDIR = "False" ] ; then
 	
 	# copy apt-cacher proxy configuration 
 	install files/etc_apt_apt.d.conf.d_00proxy $IMAGEDIR/etc/apt/apt.conf.d/00proxy	
+
+	# install system localization stuff
+	chroot $IMAGEDIR apt-get -y install locales
+
+	# install prereq system stuff
+	chroot $IMAGEDIR apt-get -y install dialog netbase
+
 
 	# set timezone and keyboard
 	echo "Europe/Berlin" > $IMAGEDIR/etc/timezone
@@ -131,7 +142,20 @@ if [ ! $IMAGEDIR = "False" ] ; then
 	# password less ssh login for root
 	mkdir -p $IMAGEDIR/root/.ssh
 	cat /root/.ssh/id_rsa.pub > $IMAGEDIR/root/.ssh/authorized_keys
+
+	# install system stuff
+	chroot $IMAGEDIR apt-get --yes --quiet install console-common console-data
+
+	# install system tools
+	chroot $IMAGEDIR apt-get --yes install moreutils manpages
+
+	# install common tools
+	chroot $IMAGEDIR apt-get --yes --quiet install vim sudo mc bzip2
+
+	# install network tools
+	chroot $IMAGEDIR apt-get --yes install net-tools iputils-ping
 	
+
 	# preseed NIS
 	# configure NIS clients
 #	echo "nis nis/domain string $(ypdomainname)" | chroot $IMAGEDIR debconf-set-selections
@@ -182,13 +206,6 @@ if [ ! $IMAGEDIR = "False" ] ; then
 	
 	echo "umount chroot image"
 	umount_chroot_image $IMAGEDIR
-
-
-	# load InfiniBand modules at startup
-#	IB_MODULES="mlx4_ib ib_ipoib ib_umad rdma_ucm rdma_cm"
-#	for mod in $IB_MODULES;do 
-#		echo $mod >> $IMAGEDIR/etc/modules
-#	done
 
 
 	# copy encrypted root password to chroot

@@ -12,3 +12,7 @@ vim
 sudo
 mc
 
+net-tools
+iputils-ping
+
+

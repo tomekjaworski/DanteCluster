@@ -1,6 +1,6 @@
 DEFAULT menu.c32
 PROMPT 0
-TIMEOUT 10
+TIMEOUT 20
 
 MENU TITLE Dante Cluster Node Loader
 
@@ -11,7 +11,11 @@ LABEL main-menu
 LABEL dante-node
     MENU DEFAULT
     MENU LABEL DANTE: vmlinuz-4.9.0-8-amd64
-    KERNEL kernel/vmlinuz
-    APPEND initrd=kernel/initrd
+    KERNEL kernel/vmlinuz-4.9.0-8-amd64
+    APPEND boot=aufs nfsroot=10.10.0.1:/root/dante/node ro quiet initrd=kernel/initrd.img-4.9.0-8-amd64 vga=771
 
+
+LABEL disk
+    MENU LABEL disk
+    COM32 disk.c32
 
