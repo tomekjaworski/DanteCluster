@@ -116,6 +116,7 @@ if [ ! $IMAGEDIR = "False" ] ; then
 	sed -i 's/KEYMAP=n/KEYMAP=us/' $IMAGEDIR/etc/initramfs-tools/initramfs.conf
 #	sed -i 's/DEVICE=/DEVICE=enp0s3/' $IMAGEDIR/etc/initramfs-tools/initramfs.conf
 	echo "aufs" > $IMAGEDIR/etc/initramfs-tools/modules
+	echo "overlay" > $IMAGEDIR/etc/initramfs-tools/modules
 	cp -v files/initramfs_aufs $IMAGEDIR/etc/initramfs-tools/scripts/aufs
 	# handled by aufs script
 	mkdir -p $IMAGEDIR/nfsroot $IMAGEDIR/ramdisk
