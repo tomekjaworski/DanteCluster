@@ -61,4 +61,3 @@ umount_chroot_image(){
 }
 
 
-

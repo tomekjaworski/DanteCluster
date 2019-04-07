@@ -49,7 +49,8 @@ if [ ! $IMAGEDIR = "False" ] ; then
 
 	debootstrap --variant=minbase --components=main,contrib,non-free --arch=amd64 \
 	    --include=$INCLUDE_PACKAGES \
-		wheezy $IMAGEDIR http://ftp.de.debian.org/debian  | tee  debootstrap.log
+		stretch $IMAGEDIR http://ftp.us.debian.org/debian  | tee  debootstrap.log
+
 	RETV=$?
 	if [ $RETV -ne 0 ]; then
 	    echo "debootstrap status: failed: $RETV"
@@ -66,7 +67,7 @@ if [ ! $IMAGEDIR = "False" ] ; then
 
 	# set timezone and keyboard
 	echo "Europe/Berlin" > $IMAGEDIR/etc/timezone
-	install $IMAGEDIR/usr/share/zoneinfo/Europe/Berlin /$IMAGEDIR/etc/localtime
+	install $IMAGEDIR/usr/share/zoneinfo/Europe/Warsaw $IMAGEDIR/etc/localtime
 	install files/etc_default_keyboard $IMAGEDIR/etc/default/keyboard
 
 	# generate locales
@@ -106,9 +107,10 @@ if [ ! $IMAGEDIR = "False" ] ; then
 	chroot $IMAGEDIR ln -sv /proc/mounts /etc/mtab
 	
 	# kernel and initramfs
-	chroot $IMAGEDIR apt-get -y -q install aufs-tools linux-image-amd64 firmware-linux initramfs-tools
-	sed -i 's/KEYMAP=n/KEYMAP=de/' $IMAGEDIR/etc/initramfs-tools/initramfs.conf
-	sed -i 's/DEVICE=/DEVICE=eth0/' $IMAGEDIR/etc/initramfs-tools/initramfs.conf
+	chroot $IMAGEDIR apt-get -y install udev linux-image-amd64 firmware-linux initramfs-tools
+	chroot $IMAGEDIR apt-get -y install aufs-tools
+	sed -i 's/KEYMAP=n/KEYMAP=us/' $IMAGEDIR/etc/initramfs-tools/initramfs.conf
+#	sed -i 's/DEVICE=/DEVICE=enp0s3/' $IMAGEDIR/etc/initramfs-tools/initramfs.conf
 	echo "aufs" > $IMAGEDIR/etc/initramfs-tools/modules
 	cp -v files/initramfs_aufs $IMAGEDIR/etc/initramfs-tools/scripts/aufs
 	# handled by aufs script
@@ -118,68 +120,72 @@ if [ ! $IMAGEDIR = "False" ] ; then
 
 
 	# install nis nfs-client and openssh-server
-	chroot $IMAGEDIR apt-get -y -q install nfs-common openssh-server ntp rsyslog
+	chroot $IMAGEDIR apt-get -y -q install nfs-common openssh-server
+#	chroot $IMAGEDIR apt-get -y -q install nfs-common openssh-server ntp rsyslog
+
 	# password less ssh login for root
 	mkdir -p $IMAGEDIR/root/.ssh
 	cat /root/.ssh/id_rsa.pub > $IMAGEDIR/root/.ssh/authorized_keys
 	
 	# preseed NIS
 	# configure NIS clients
-	echo "nis nis/domain string $(ypdomainname)" | chroot $IMAGEDIR debconf-set-selections
-	chroot $IMAGEDIR apt-get -y -q install nis
-	fgrep -xq "+::::::" $IMAGEDIR/etc/passwd || echo "+::::::" >> $IMAGEDIR/etc/passwd
-	fgrep -xq "+:::" $IMAGEDIR/etc/group || echo "+:::" >> $IMAGEDIR/etc/group
-	fgrep -xq "+::::::::" $IMAGEDIR/etc/shadow || echo "+::::::::" >> $IMAGEDIR/etc/shadow
-	fgrep -xq "ypserver 192.168.0.254" $IMAGEDIR/etc/yp.conf || echo "ypserver 192.168.0.254" >> $IMAGEDIR/etc/yp.conf
-	sed -i 's/compat/nis compat/g' $IMAGEDIR/etc/nsswitch.conf
-	sed -i 's/NISCLIENT=false/NISCLIENT=true/g' $IMAGEDIR/etc/default/nis
+#	echo "nis nis/domain string $(ypdomainname)" | chroot $IMAGEDIR debconf-set-selections
+#	chroot $IMAGEDIR apt-get -y -q install nis
+#	fgrep -xq "+::::::" $IMAGEDIR/etc/passwd || echo "+::::::" >> $IMAGEDIR/etc/passwd
+#	fgrep -xq "+:::" $IMAGEDIR/etc/group || echo "+:::" >> $IMAGEDIR/etc/group
+#	fgrep -xq "+::::::::" $IMAGEDIR/etc/shadow || echo "+::::::::" >> $IMAGEDIR/etc/shadow
+#	fgrep -xq "ypserver 192.168.0.254" $IMAGEDIR/etc/yp.conf || echo "ypserver 192.168.0.254" >> $IMAGEDIR/etc/yp.conf
+#	sed -i 's/compat/nis compat/g' $IMAGEDIR/etc/nsswitch.conf
+#	sed -i 's/NISCLIENT=false/NISCLIENT=true/g' $IMAGEDIR/etc/default/nis
 
 	# configure NTP
-	install files/etc_ntp.conf $IMAGEDIR/etc/ntp.conf
+#	install files/etc_ntp.conf $IMAGEDIR/etc/ntp.conf
 	
 	# configure rsyslog for remote logging
-	install files/etc_rsyslog.conf $IMAGEDIR/etc/rsyslog.conf
+#	install files/etc_rsyslog.conf $IMAGEDIR/etc/rsyslog.conf
 
 
 	# cluster managment
-	chroot $IMAGEDIR apt-get -y -q install slurm-llnl munge ganglia-monitor
+#	chroot $IMAGEDIR apt-get -y -q install slurm-llnl munge ganglia-monitor
 
 	# configure munge
-	MUNGE_UID=$(chroot $IMAGEDIR id -u munge)
-	MUNGE_GID=$(chroot $IMAGEDIR id -g munge)
-
-	if [ -f /etc/munge/munge.key ];then
-		echo "MUNGE key found"
-	else
-		echo "Create MUNGE key"
-		create-munge-key
-	fi
-	install --mode=600 --group=$MUNGE_GID --owner=$MUNGE_UID  /etc/munge/munge.key $IMAGEDIR/etc/munge/
+#	MUNGE_UID=$(chroot $IMAGEDIR id -u munge)
+#	MUNGE_GID=$(chroot $IMAGEDIR id -g munge)
+#
+#	if [ -f /etc/munge/munge.key ];then
+#		echo "MUNGE key found"
+#	else
+#		echo "Create MUNGE key"
+#		create-munge-key
+#	fi
+#	install --mode=600 --group=$MUNGE_GID --owner=$MUNGE_UID  /etc/munge/munge.key $IMAGEDIR/etc/munge/
 	
 	# configure slurm
-	[ -f /etc/slurm-llnl/slurm.conf ] && cp -v /etc/slurm-llnl/slurm.conf $IMAGEDIR/etc/slurm-llnl/
+#	[ -f /etc/slurm-llnl/slurm.conf ] && cp -v /etc/slurm-llnl/slurm.conf $IMAGEDIR/etc/slurm-llnl/
 
 	# configure ganglia gmond
-	install files/etc_ganglia_gmond.conf $IMAGEDIR/etc/ganglia/gmond.conf
+#	install files/etc_ganglia_gmond.conf $IMAGEDIR/etc/ganglia/gmond.conf
 
 	# gromacs
-	chroot $IMAGEDIR apt-get -y -q install gromacs-openmpi gromacs-data gromacs-dev
+#	chroot $IMAGEDIR apt-get -y -q install gromacs-openmpi gromacs-data gromacs-dev
 
 	# development 
-	chroot $IMAGEDIR apt-get -y -q install build-essential make  gfortran libopenmpi-dev
+#	chroot $IMAGEDIR apt-get -y -q install build-essential make  gfortran libopenmpi-dev
 	
 	# python packages
-	chroot $IMAGEDIR apt-get -y -q install python-scipy ipython python-zmq
+#	chroot $IMAGEDIR apt-get -y -q install python-scipy ipython python-zmq
 	
 	echo "umount chroot image"
 	umount_chroot_image $IMAGEDIR
 
 
 	# load InfiniBand modules at startup
-	IB_MODULES="mlx4_ib ib_ipoib ib_umad rdma_ucm rdma_cm"
-	for mod in $IB_MODULES;do 
-		echo $mod >> $IMAGEDIR/etc/modules
-	done
+#	IB_MODULES="mlx4_ib ib_ipoib ib_umad rdma_ucm rdma_cm"
+#	for mod in $IB_MODULES;do 
+#		echo $mod >> $IMAGEDIR/etc/modules
+#	done
+
+
 	# copy encrypted root password to chroot
 	usermod -R $IMAGEDIR -p $(grep root /etc/shadow|awk -F: '{ print $2 }') root
 	pwck -R $IMAGEDIR -s
@@ -189,8 +195,8 @@ if [ ! $IMAGEDIR = "False" ] ; then
 	# prepare PXE
 	INITRD=$(ls $IMAGEDIR/boot/initrd.img*amd64|sort -r|head -1) # copy newest
 	VMINUZ=$(ls $IMAGEDIR/boot/vmlinuz*amd64|sort -r|head -1) # copy newest
-	cp -v $INITRD /srv/tftp/$(basename ${INITRD}) 
-	cp -v $VMINUZ /srv/tftp/$(basename ${VMINUZ}) 
+	cp -v $INITRD /srv/tftp/kernel/$(basename ${INITRD}) 
+	cp -v $VMINUZ /srv/tftp/kernel/$(basename ${VMINUZ}) 
 	#cp -v $IMAGEDIR/boot/initrd.img-3.2.0-4-amd64 /srv/tftp/initrd.img-3.2.0-4-amd64 
 
 	# copy pre-generated host-keys to the chroot
