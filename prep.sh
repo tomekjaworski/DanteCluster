@@ -13,7 +13,8 @@ debootstrap				\
 	--verbose			\
 	--variant=minbase		\
 	--arch=amd64			\
+	--include=console-common,console-data,ifupdown,sysv-rc-conf,vim,sudo	\
 	stretch ./node 			\
-	http://ftp.pl.debian.org/debian
+	http://ftp.us.debian.org/debian
 
 
