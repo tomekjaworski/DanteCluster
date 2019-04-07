@@ -1,0 +1,9 @@
+#!/bin/bash
+
+
+[ -d ssh ] || mkdir ssh
+ssh-keygen -v -q -f ssh/ssh_host_key  -N '' -t rsa1
+ssh-keygen -v -q -f ssh/ssh_host_rsa_key  -N '' -t rsa
+ssh-keygen -v -q -f ssh/ssh_host_dsa_key  -N '' -t dsa
+ssh-keygen -v -q -f ssh/ssh_host_ecdsa_key  -N '' -t dsa
+

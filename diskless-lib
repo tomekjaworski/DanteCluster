@@ -1,0 +1,64 @@
+# is a necessary step for a complete working system once chrooted.
+
+mount_chroot_image(){
+    local image_dir=$1
+
+    mount -t proc proc ${image_dir}/proc
+    mount -t sysfs sysfs ${image_dir}/sys
+    mount -t tmpfs -o rw,noatime,mode=755 tmpfs ${image_dir}/tmp
+
+    #mount -t tmpfs -o rw,nosuid,mode=0755 tmpfs ${image_dir}/var/run
+    #mount -t tmpfs -o rw,noexec,nosuid,nodev tmpfs ${image_dir}/var/lock
+
+    mount -t devpts -o rw,noexec,nosuid,gid=5,mode=0620 devpts ${image_dir}/dev/pts
+    mount -t tmpfs -o rw,nosuid,nodev tmpfs ${image_dir}/dev/shm
+
+    # Share apt's preferences, package's cache, etc...
+#    for mount in etc/apt/ \
+#                 var/lib/apt/lists/ \
+#                 var/cache/apt/
+#    do
+#         mount --bind /${mount} ${image_dir}/${mount}
+#    done
+
+    # Create a fake initctl and a fake start-stop-daemon to prevent dpkg from
+    # starting services when installing or upgrading those services
+#    mv ${image_dir}/sbin/start-stop-daemon \
+#       ${image_dir}/sbin/start-stop-daemon.real
+
+#    [ -x "${image_dir}/sbin/initctl" ] &&
+#    mv ${image_dir}/sbin/initctl \
+#       ${image_dir}/sbin/initctl.real
+
+#    ln ${image_dir}/bin/true ${image_dir}/sbin/start-stop-daemon
+#    ln ${image_dir}/bin/true ${image_dir}/sbin/initctl
+}
+
+
+# umount_chroot_image <image_dir>
+# 
+#     Unmounts the chrooted image.
+
+umount_chroot_image(){
+    local image_dir=$1
+
+    for mount in proc sys tmp       \
+                 dev/{pts,shm}      \
+#                 etc/apt/           \
+#                 var/lib/apt/lists/ \
+#                 var/cache/apt/
+    do
+         umount ${image_dir}/${mount}
+    done
+
+#    mv -f ${image_dir}/sbin/start-stop-daemon.real \
+#          ${image_dir}/sbin/start-stop-daemon
+
+#    [ -x "${image_dir}/sbin/initctl.real" ] &&
+#    mv -f ${image_dir}/sbin/initctl.real \
+#          ${image_dir}/sbin/initctl
+
+}
+
+
+
