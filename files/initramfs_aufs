@@ -20,25 +20,42 @@ mountroot()
     configure_networking
     test -d /nfsroot || mkdir /nfsroot
     test -d /ramdisk || mkdir /ramdisk
+	test -d /workdir || mkdir /workdir
     test -d /${rootmnt} || mkdir ${rootmnt}
     sleep 3
 
     mount -t tmpfs -o rw,size=$ROOTTMPFSSIZE tmpfs /ramdisk
     retry_nr=0
     max_retry=30
-    while [ ${retry_nr} -lt ${max_retry} ] && [ ! -e /nfsroot/${init} ]; do
+
+	mkdir /ramdisk/root
+	mkdir /ramdisk/workdir
+
+	echo "NFSOPTS=${NFSOPTS}"
+	echo "NFSROOT=${NFSROOT}"
+	echo "init=${init}"
+	echo "rootmnt=${rootmnt}"
+
+#    while [ ${retry_nr} -lt ${max_retry} ] && [ ! -e /nfsroot/${init} ]; do
         log_begin_msg "Trying nfs mount"
         nfsmount -o nolock,ro  ${NFSOPTS} ${NFSROOT} /nfsroot
         /bin/sleep 1
         retry_nr=$(( ${retry_nr} + 1 ))
         log_end_msg
-    done
+#    done
     # overlay /ramdisk(rw) over /nfsroot(ro) and mount it on /
-    mount -t aufs -o dirs=/ramdisk=rw:/nfsroot=ro none ${rootmnt}
+    #mount -t aufs -o dirs=/ramdisk=rw:/nfsroot=ro none ${rootmnt}
+
+	echo mount -t overlay -o lowerdir=/nfsroot,upperdir=/ramdisk,workdir=/workdir none ${rootmnt}
+	mount -t overlay -o lowerdir=/nfsroot,upperdir=/ramdisk/root,workdir=/ramdisk/workdir none /root
+
     echo ${hostname} > ${rootmnt}/etc/hostname
     echo "cluster" > ${rootmnt}/etc/defaultdomain
     echo "live-node" > ${rootmnt}/etc/debian_chroot
     
+	echo "Gotowe!"
+	/bin/sleep 3
+
 }
  
 
