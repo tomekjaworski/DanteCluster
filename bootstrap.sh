@@ -34,11 +34,15 @@ while getopts ":d:" opt; do
 		if [ -d $IMAGEDIR ]; then
 		 echo "Directory exists: ${IMAGEDIR}"
 		 echo "aborting ..."
-		 exit 1
+#		 exit 1
 		fi
 	esac
 
 done
+
+#umount_chroot_image $IMAGEDIR
+#rm -rf ./node/etc/fstab
+#rm -rf ./node/etc/mtab
 
 # include_packages should be one package per column
 # replace "\n" with "," then remove the last "," to feed it to debootstraps --include
