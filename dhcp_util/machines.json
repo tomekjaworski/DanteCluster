@@ -1,0 +1,16 @@
+{
+  "machines": [
+    {
+      "hardware": "11:22:33:44:00:00",
+      "ip": "10.10.0.21",
+      "hostname": "node2",
+      "location": "Shelf 1, column 1"
+    },
+    {
+      "hardware": "11:22:33:44:55:66",
+      "ip": "10.10.0.20",
+      "hostname": "node1",
+      "location": "Shelf 1, column 2"
+    }
+  ]
+}
