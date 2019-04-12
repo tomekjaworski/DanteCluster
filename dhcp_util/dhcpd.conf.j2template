@@ -25,6 +25,7 @@ subnet 10.10.0.0 netmask 255.255.0.0 {
 	option domain-name-servers 10.10.0.1;
 
 	option host-name "aNode";
+    filename "pxelinux.0";
 
 {% for machine in machines %}
 
