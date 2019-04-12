@@ -18,9 +18,12 @@ if __name__ == "__main__":
         lease_id = random.randint(0, 0xffffffff)
         machine["lease_id"] = "lease-%08x" % lease_id
 
+        print("Machine %s -> ip=%s" % (machine['hardware'], machine['ip']))
+
     output = template.render(machines=hardware["machines"])
 
     with open("dhcpd.conf", "wt") as f:
         f.write(output)
 
-    print("")
+    print("Done.")
+
