@@ -16,7 +16,7 @@ if __name__ == "__main__":
 
     for machine in hardware["machines"]:
         lease_id = random.randint(0, 0xffffffff)
-        machine["lease_id"] = f"lease-{lease_id:08x}"
+        machine["lease_id"] = "lease-%08x" % lease_id
 
     output = template.render(machines=hardware["machines"])
 
