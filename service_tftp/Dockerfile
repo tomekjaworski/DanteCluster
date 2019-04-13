@@ -11,7 +11,7 @@ LABEL maintainer="Tomasz Jaworski <tjaworski@iis.p.lodz.pl>"
 # Install needed packages
 RUN apt update
 RUN apt upgrade --yes
-RUN apt install --yes tftpd-hpa pxelinux
+RUN apt install --yes tftpd-hpa pxelinux rsyslog
 RUN apt install --yes net-tools
 
 
@@ -29,8 +29,8 @@ RUN cp /usr/lib/syslinux/modules/bios/libutil.c32 /srv/tftp
 RUN mkdir /srv/tftp/pxelinux.cfg
 COPY default /srv/tftp/pxelinux.cfg/default
 
+WORKDIR /srv
+COPY start.sh .
 
-CMD ["/usr/sbin/in.tftpd", "--foreground", "--user", "tftp", "--address", "0.0.0.0:69", "--secure", "/srv/tftp", "-vv"]
-
-CMD ["/bin/bash"]
+ENTRYPOINT ["./start.sh"]
 

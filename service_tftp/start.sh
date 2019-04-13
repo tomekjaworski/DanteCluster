@@ -1,23 +1,23 @@
-#/bin/bash
+#!/bin/bash
 #
 
 echo "#####################################################"
 echo "##                                                 ##"
-echo "## Dante Cluster :: DHCP/PXE virtualization        ##"
+echo "## Dante Cluster :: TFTP virtualization            ##"
 echo "## Author: Tomasz Jaworski, 2019                   ##"
 echo "##                                                 ##"
 echo "#####################################################"
 
 set -e
 
+service rsyslog start
+service rsyslog status
 
-cd /srv
-python dhcp_builder.py
+#
+echo Running TFTP server...
+/usr/sbin/in.tftpd --listen --user tftp --address 0.0.0.0:69 --secure /srv/tftp -vv
 
-cp dhcpd.conf /etc/dhcp/dhcpd.conf
+echo Running tail on /var/log/syslog...
+tail -f /var/log/syslog
 
-echo Running DHCP server...
-dhcpd -4 -f -d --no-pid
-
-#/bin/bash
 
