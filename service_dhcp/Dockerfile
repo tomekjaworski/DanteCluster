@@ -1,5 +1,5 @@
 #
-# Docker-based DHCP service for Dante Cluster Computing
+# Docker-based DHCP service for Dante Automated Unit and Acceptance Testing Cluster
 # Author: Tomasz Jaworski, 2019
 # 
 
@@ -17,7 +17,7 @@ RUN apt install --yes net-tools
 
 
 # Setup basic networking
-EXPOSE 69/udp 67/udp 67/tcp
+EXPOSE 67/udp 67/tcp
 
 # Prepare python env
 RUN pip3 install jinja2
