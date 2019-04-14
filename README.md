@@ -1,5 +1,5 @@
-Dante Automated Acceptance and Unit Testing Cluster
-###
+# Dante Automated Acceptance and Unit Testing Cluster
+
 
 OS version for the Controller: **Debian 9.8 (stretch)**
  * Netinstal ISO: [https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-9.8.0-amd64-netinst.iso](https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-9.8.0-amd64-netinst.iso).
@@ -10,8 +10,7 @@ Hardware should have two network interfaces with the following assumption:
 
 Bare in mind that those two names are used in configuration files and if differ - should be normalized before the installation begins.
 
-Debian Installation Process
-------
+### Debian Installation Process
 
 The following steps are prepared based on Virtual Box simulation for netinst ISO file (above). But there is no reason why a real hardware installation would behave any differently. As a result you will have a cleanly installed OS.
 
@@ -36,7 +35,6 @@ Now wait for the base system packages to be installed...
 1. Install the GRUB boot loader on a hard disk: select *Yes* and */dev/sda*.
 1. Finish!
 
-Software installation
-------
+### Software installation
 
 work in progress
