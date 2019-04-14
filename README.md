@@ -35,11 +35,11 @@ Now wait for the base system packages to be installed...
 1. Install the GRUB boot loader on a hard disk: select *Yes* and */dev/sda*.
 1. Finish!
 
-### Software installation (WORK IN PROGRESS)
+## Software installation (WORK IN PROGRESS)
 
 All commands and scripts assume that you are logged in as `root`, including remote session.
 
-#### Install base Linux tools
+### Install base Linux tools
 
 Install man-pages `man` reader and `ifconfig`.
 
@@ -82,7 +82,34 @@ You need to create your private user, log into it and switch to root by issuing 
 su
 ```
 
-#### Install this repository
+### System Setup
+Since `systemd` is here and it's not going anywhere soon we should try and use it after all. Debian installer creates `/etc/network/interfaces` file by default. Rename it to `interfaces.old` and replace it with systemd-based approach. 
+For this create `/etc/systemd/network/enp0s3.network` file with the following content:
+```
+[Match]
+Name=enp0s3
+
+[Network]
+DHCP=v4
+#Address=10.10.0.1/16
+#Gateway=192.168.0.104
+#DNS=8.8.8.8
+```
+This file will start outer network interface **enp0s3** in DHCP mode. Now a similar config file should be created for **enp0s8**:
+```
+[Match]
+Name=enp0s8
+
+[Network]
+Address=10.10.0.1/16
+#Gateway=192.168.0.104
+#DNS=8.8.8.8r
+```
+
+Enable `systemd` network service by issuing `systemctl enable systemd-networkd.service`
+and after rebooting your machine test it with `systemctl status systemd-networkd.service` and `ifconfig`. Now we have both interfaces activated.
+
+### Install this repository
 
 Firstly you have to install `git` tool and *https* support (SSL):
 ```
@@ -97,9 +124,7 @@ cd /srv
 git clone https://github.com/tomekjaworski/DanteCluster dc
 ```
 
-# WORK IN PROGRESS
-
-#### Install Docker
+### Install Docker
 
 For this task you can follow the Official Docker Docs [here](https://docs.docker.com/install/linux/docker-ce/debian/) 
 or run [01_install_docker.sh](https://github.com/tomekjaworski/DanteCluster/blob/feature/docs/01_install_docker.sh) script based on it.
@@ -107,5 +132,17 @@ or run [01_install_docker.sh](https://github.com/tomekjaworski/DanteCluster/blob
 ```
 ./01_install_docker.sh
 ```
+
+### Test contenerized DHCP and TFTP
+At this point network and Docker is up and running. We can start TFTP and DHCP services for the inner network. No machine will boot up since there is no kernel provided yet (no NFS filesystem is set) but at least we will know it this basic setup is ok.
+
+To do this tart both services via `./make.sh` and `./runme.sh` from both `/srv/dc/service_dhcp` and `/srv/dc/service_tftp`. The runme scripts can be configured to run in foreground. If so, use `tmux` as message sink or change those scripts to run `docker` detached.
+
+While any cluster machine is powered on you should see DHCPLEASE being requested and followed by `pxelinux.0` retrieval.
+Of course this machine should be configured to bootup via PXE. If so you should see somethig more or less like this:
+
+![menu.c32](https://wiki.syslinux.org/wiki/images/2/20/Simplemenu.png)
+
+From [Syslinux Wiki](https://wiki.syslinux.org/wiki/index.php?title=File:Simplemenu.png).
 
 
