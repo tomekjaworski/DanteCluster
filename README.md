@@ -146,3 +146,34 @@ Of course this machine should be configured to bootup via PXE. If so you should 
 From [Syslinux Wiki](https://wiki.syslinux.org/wiki/index.php?title=File:Simplemenu.png).
 
 
+### Custom Debian distro preparation
+
+
+WORK IN PROGRESS
+
+
+### NFS Installation
+In order to provide `/` directory (and its content) to the nodes the `NFS` server is used. To install and initialize it, use the following commands:
+```
+apt install nfs-kernel-server
+```
+Now, to initialize the client tracker (`nfsdcltrack`) type:
+```
+mkdir /var/lib/nfs/nfsdcltrack
+nfsdcltrack init
+```
+After that the file `/var/lib/nfs/nfsdcltrack/main.sqlite` should exist.
+
+Now add the following line to `/etc/exports` and restart the NFS server with `systemctl restart nfs-server.service`:
+```
+/srv/dc/nfsroot 10.10.0.1/255.255.0.0(ro,sync,no_root_squash,fsid=0)
+```
+It will open a remote mount point named `/srv/dc/nfsroot` available at `10.10.0.1` (this machine) for the whole subset /16.
+
+You can now go and try to test mount this resource by typing:
+```
+mkdir /test_mount
+moun -t nfs 10.10.0.1:/srv/dc/nfsroot /test_mount
+```
+You should be now able to see your `/srv/dc/nfsroot` content under `/test_mount`.
+
