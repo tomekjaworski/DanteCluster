@@ -26,6 +26,10 @@ RUN cp /usr/lib/syslinux/modules/bios/ldlinux.c32 /srv/tftp/
 RUN cp /usr/lib/syslinux/modules/bios/menu.c32 /srv/tftp
 RUN cp /usr/lib/syslinux/modules/bios/libutil.c32 /srv/tftp
 
+#COPY /srv/dc/nfsroot/boot/make.sh /srv/tftp/
+COPY vmlinuz-4.9.0-8-amd64 /srv/tftp/vmlinuz-4.9.0-8-amd64
+COPY initrd.img-4.9.0-8-amd64 /srv/tftp/initrd.img-4.9.0-8-amd64
+
 RUN mkdir /srv/tftp/pxelinux.cfg
 COPY default /srv/tftp/pxelinux.cfg/default
 
