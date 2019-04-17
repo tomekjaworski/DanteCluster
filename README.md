@@ -1,18 +1,15 @@
 # Dante Automated Acceptance and Unit Testing Cluster
 
-
 OS version for the Controller: **Debian 9.8 (stretch)**
  * Netinstal ISO: [https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-9.8.0-amd64-netinst.iso](https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-9.8.0-amd64-netinst.iso).
  
-Hardware should have two network interfaces with the following assumption:
- * Interface **enp0s3** is connected to the main network (outer layer).
- * Interface **enp0s8** is connected to the node machines (inner layer).
-
-Bare in mind that those two names are used in configuration files and if differ - should be normalized before the installation begins.
+Hardware:
+ * At least two network controllers attacged (in my case both are Ethernets).
 
 ### Debian Installation Process
 
-The following steps are prepared based on Virtual Box simulation for netinst ISO file (above). But there is no reason why a real hardware installation would behave any differently. As a result you will have a cleanly installed OS.
+The following steps are prepared based on Virtual Box simulation for netinst ISO file (above) and tested on real hardware.
+As a result you will have a cleanly installed OS.
 
 1. Boot the netinstaller from downloaded image.
 1. Select *Install*.
@@ -35,8 +32,6 @@ Now wait for the base system packages to be installed...
 1. Install the GRUB boot loader on a hard disk: select *Yes* and */dev/sda*.
 1. Finish!
 
-## Software installation (WORK IN PROGRESS)
-
 All commands and scripts assume that you are logged in as `root`, including remote session.
 
 ### Install base Linux tools
@@ -44,7 +39,7 @@ All commands and scripts assume that you are logged in as `root`, including remo
 Install man-pages `man` reader and `ifconfig`.
 
 ```
-apt install --no-install-recommends --yes man net-tools 
+apt install --no-install-recommends --yes man
 ```
 
 Install and run OpenSSH Server. Remote terminal is more user friendly, at least for me :)
@@ -53,20 +48,7 @@ Install and run OpenSSH Server. Remote terminal is more user friendly, at least 
 apt install --no-install-recommends --yes openssh-server net-tools
 ```
 
-Now check your external IP for the *enp0s3* interface with `ifconfig enp0s3` command to see something like this:
-```
-enp0s3: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
-        inet 192.168.1.108  netmask 255.255.255.0  broadcast 192.168.1.255
-        inet6 fe80::a00:27ff:fe82:2160  prefixlen 64  scopeid 0x20<link>
-        ether 08:00:27:82:21:60  txqueuelen 1000  (Ethernet)
-        RX packets 3172  bytes 4532082 (4.3 MiB)
-        RX errors 0  dropped 0  overruns 0  frame 0
-        TX packets 1364  bytes 106407 (103.9 KiB)
-        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
-```
-
-If so, connect a SSH client (eg. putty) to the IP address shown (here it's `192.168.1.108`) and now you can work remotely.
-In addition you can now install helper tools like:
+Install additional helper tools like:
  * `mc` - Midnight Commander
  * `htop` - a `top` alternative
  * `tmux` - for multiple text terminals in a single window
@@ -76,38 +58,112 @@ In addition you can now install helper tools like:
 apt install --no-install-recommends --yes mc htop tmux vim
 ```
 
+### Network setup
+
+At this point we have a machine that has a default network setting.
+To see it, run `ifconfig -a` command. Output should be something like this:
+```
+enp0s3: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet6 fe80::a00:27ff:fee9:7f29  prefixlen 64  scopeid 0x20<link>
+        ether 08:00:27:e9:7f:29  txqueuelen 1000  (Ethernet)
+        RX packets 0  bytes 0 (0.0 B)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 8  bytes 648 (648.0 B)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
+        inet 127.0.0.1  netmask 255.0.0.0
+        inet6 ::1  prefixlen 128  scopeid 0x10<host>
+        loop  txqueuelen 1  (Local Loopback)
+        RX packets 0  bytes 0 (0.0 B)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 0  bytes 0 (0.0 B)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+enp0s8: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet6 fe80::a00:27ff:fe82:2160  prefixlen 64  scopeid 0x20<link>
+        ether 08:00:27:82:21:60  txqueuelen 1000  (Ethernet)
+        RX packets 173  bytes 16801 (16.4 KiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 145  bytes 29013 (28.3 KiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+```
+
+The `lo` device is the loopback and should be left alone. However both `enp`s are what we want to play with. Those names are of our two network cards.
+And because they will change from configuration to configuration I've decided to normalize them by changing their names.
+Bare in mind that new names will be used further in this tutorial along with any config file that is available here.
+
+For this we will use `systemd` functionality. Since `systemd` is here and it's not going anywhere soon we should try and use it after all.
+Debian installer creates `/etc/network/interfaces` file by default. Rename it to `interfaces.old` and replace it with systemd-based approach. 
+
+To change name of a network interface we need to know its MAC address (see `ifconfig -a` output).
+Let us assume that `08:00:27:e9:7f:29` identifies an interface that is connected to the internal (inner) network with cluster node machines,
+while `08:00:27:82:21:60` is connected to the outer world network (LAN, WAN or whatever - the Internets perhaps?).
+
+If so, create two files: **/etc/systemd/network/10-inner.link** and **/etc/systemd/network/10-outer.link** with the following content:
+```
+[Match]
+MACAddress=xx:xx:xx:xx:xx:xx
+
+[Link]
+Name=__name__goes__here__
+```
+however replace the `xx:xx:xx:xx:xx:xx` and `__name__goes_here__` parts with MAC address correlated with proper `inner`/`outer` name.
+
+Now we should create ISO Layer-3 description for both interfaces with the following files (see `/confs/etc-systemd-network/` in this repo).
+Those files will start outer network interface in DHCP mode and inner as `10.10.0.1`.
+
+* **Outer** network file `/etc/systemd/network/outer.network`:
+```
+[Match]
+Name=outer
+
+[Network]
+DHCP=v4
+```
+
+* **Inner** network file `/etc/systemd/network/inner.network`:
+
+```
+[Match]
+Name=inner
+
+[Network]
+Address=10.10.0.1/16
+#Gateway=192.168.0.104
+#DNS=8.8.8.8
+```
+
+Now update your `initrd` configuration by running `update-initramfs -u` and reboot your machine. New settings will be used during the next boot.
+After that check your new settings (`ifconfig -a`) and you should see something like this:
+
+```
+inner: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 10.10.0.1  netmask 255.255.0.0  broadcast 10.10.255.255
+        inet6 fe80::a00:27ff:fee9:7f29  prefixlen 64  scopeid 0x20<link>
+        ether 08:00:27:e9:7f:29  txqueuelen 1000  (Ethernet)
+        RX packets 0  bytes 0 (0.0 B)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 8  bytes 648 (648.0 B)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+outer: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 192.168.1.108  netmask 255.255.255.0  broadcast 192.168.1.255
+        inet6 fe80::a00:27ff:fe82:2160  prefixlen 64  scopeid 0x20<link>
+        ether 08:00:27:82:21:60  txqueuelen 1000  (Ethernet)
+        RX packets 318  bytes 28663 (27.9 KiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 264  bytes 44977 (43.9 KiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+```
+
+If so, connect a SSH client (eg. putty) to the IP address shown (here it's `192.168.1.108`) and now you can work remotely.
+
 Remote session doesn't allow you to connect as `root` (and that's good).
 You need to create your private user, log into it and switch to root by issuing simple:
 ```
 su
 ```
-
-### System Setup
-Since `systemd` is here and it's not going anywhere soon we should try and use it after all. Debian installer creates `/etc/network/interfaces` file by default. Rename it to `interfaces.old` and replace it with systemd-based approach. 
-For this create `/etc/systemd/network/enp0s3.network` file with the following content:
-```
-[Match]
-Name=enp0s3
-
-[Network]
-DHCP=v4
-#Address=10.10.0.1/16
-#Gateway=192.168.0.104
-#DNS=8.8.8.8
-```
-This file will start outer network interface **enp0s3** in DHCP mode. Now a similar config file should be created for **enp0s8**:
-```
-[Match]
-Name=enp0s8
-
-[Network]
-Address=10.10.0.1/16
-#Gateway=192.168.0.104
-#DNS=8.8.8.8r
-```
-
-Enable `systemd` network service by issuing `systemctl enable systemd-networkd.service`
-and after rebooting your machine test it with `systemctl status systemd-networkd.service` and `ifconfig`. Now we have both interfaces activated.
 
 ### Install this repository
 
