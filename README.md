@@ -202,12 +202,6 @@ Of course this machine should be configured to bootup via PXE. If so you should 
 From [Syslinux Wiki](https://wiki.syslinux.org/wiki/index.php?title=File:Simplemenu.png).
 
 
-### Custom Debian distro preparation
-
-
-WORK IN PROGRESS
-
-
 ### NFS Installation
 In order to provide `/` directory (and its content) to the nodes the `NFS` server is used. To install and initialize it, use the following commands:
 ```
@@ -233,3 +227,22 @@ moun -t nfs 10.10.0.1:/srv/dc/nfsroot /test_mount
 ```
 You should be now able to see your `/srv/dc/nfsroot` content under `/test_mount`.
 
+
+### Custom Debian distro preparation
+
+This step is based on `debootstrap` Debian package and modified scripts, provided by *Markus Rosenstihl* for his own high-performance cluster.
+More information you can find on [his Bitbucket webpage](https://bitbucket.org/mrosenstihl/debian-diskless-cluster/wiki/Home) and Wiki.
+
+Before we can start, the `debootstrap` package should be installed:
+```
+apt install --no-install-recommends --yes debootstrap
+```
+
+Now run main script:
+```
+./bootstrap.sh -d /srv/dc/nfsroot
+```
+This will take couple of minutes - some coffee is suggested :) After successful instalation you will have a Debian distro in `/srv/dc/nfsroot`.
+
+
+WORK IN PROGRESS
