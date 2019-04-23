@@ -14,11 +14,17 @@
 #
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-
-
 # exit if any command fails
 set -e
+
+YELLOW='\033[0;33m'	# Yellow
+NOCOLOR='\033[0m'	# No color
+
+function msg () # 1:string
+{
+    echo -e "${YELLOW}$1${NOCOLOR}"
+}
+
 
 # load our library
 . diskless-lib
@@ -30,12 +36,15 @@ while getopts ":d:" opt; do
 	case  $opt in
 		d)
 		IMAGEDIR=$OPTARG 
-		echo Installing to $IMAGEDIR
+		echo "Installing to $IMAGEDIR..."
 
 		if [ -d $IMAGEDIR ]; then
 		 echo "Directory exists: ${IMAGEDIR}"
-		 echo "aborting ..."
-#		 exit 1
+
+		 echo "Press CTRL+C to break or ENTER to continue..."
+		 read
+		 #echo "aborting ..."
+		 #exit 1
 		fi
 	esac
 
@@ -52,7 +61,7 @@ done
 if [ ! $IMAGEDIR = "False" ] ; then
 
 	if [ $SKIP_DEBOOTSTRAP == "False" ] ; then
-		echo "debootstrap to $IMAGEDIR"
+		msg "debootstrap to $IMAGEDIR"
 
 		debootstrap --variant=minbase --components=main,contrib,non-free --arch=amd64 \
 	    	--include=systemd,systemd-sysv \
@@ -114,10 +123,10 @@ if [ ! $IMAGEDIR = "False" ] ; then
 	#cp files/etc_resolv.conf $IMAGEDIR/etc/resolv.conf
 	cp /etc/resolv.conf $IMAGEDIR/etc/resolv.conf
 
+
 	echo "image" > $IMAGEDIR/etc/debian_chroot
 
-
-	echo "mount chroot image"
+	msg "mount chroot image"
 	mount_chroot_image $IMAGEDIR
 	chroot $IMAGEDIR ln -sv /proc/mounts /etc/mtab
 	
@@ -204,7 +213,7 @@ if [ ! $IMAGEDIR = "False" ] ; then
 	# python packages
 #	chroot $IMAGEDIR apt-get -y -q install python-scipy ipython python-zmq
 	
-	echo "umount chroot image"
+	msg "umount chroot image"
 	umount_chroot_image $IMAGEDIR
 
 
