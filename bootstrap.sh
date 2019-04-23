@@ -133,15 +133,16 @@ if [ ! $IMAGEDIR = "False" ] ; then
 	echo "ALL	ALL=NOPASSWD: /sbin/shutdown, /sbin/halt, /sbin/reboot, /sbin/poweroff" >> $IMAGEDIR/etc/sudoers
 
 	# prevent starting of services
-	echo "prevent starting of daemons"
+	msg "Prevent starting of daemons"
 	echo -e "#!/bin/sh\necho Not starting daemon\nexit 101" > $IMAGEDIR/usr/sbin/policy-rc.d
 	chmod 755 $IMAGEDIR/usr/sbin/policy-rc.d
 	
-	echo "prevent installation of suggested/recommended packages"
+	msg "Prevent installation of suggested/recommended packages"
 	echo -e "APT::Install-Recommends \"0\";" > $IMAGEDIR/etc/apt/apt.conf
 	echo -e "APT::Install-Suggests \"0\";" >> $IMAGEDIR/etc/apt/apt.conf
 
 	# networking	
+	msg "Networking"
 	echo "auto lo" > $IMAGEDIR/etc/network/interfaces
 	echo "iface lo inet loopback" >> $IMAGEDIR/etc/network/interfaces
 	echo "iface enp0s3 inet manual" >> $IMAGEDIR/etc/network/interfaces
