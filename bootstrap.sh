@@ -64,10 +64,16 @@ while getopts ":d:b" opt; do
 
 done
 
-#umount_chroot_image $IMAGEDIR
-#rm -rf ./node/etc/fstab
-#rm -rf ./node/etc/mtab
+#exit 1
+if [ ! -f ~/.ssh/id_rsa.pub ]; then
+	echo "Could not fine file ~/.ssh/id_rsa.pub"
+	echo "Use ssh-keygen and create public key for nodes"
+	exit 1
+fi
 
+#umount_chroot_image $IMAGEDIR
+
+#exit 1
 # include_packages should be one package per column
 # replace "\n" with "," then remove the last "," to feed it to debootstraps --include
 #INCLUDE_PACKAGES=$(awk 1 ORS="," config/include_packages | sed -e 's/,$//' -e 's/\ //')
@@ -168,7 +174,7 @@ if [ ! $IMAGEDIR = "False" ] ; then
 
 	# password less ssh login for root
 	mkdir -p $IMAGEDIR/root/.ssh
-	cat /root/.ssh/id_rsa.pub > $IMAGEDIR/root/.ssh/authorized_keys
+	cat ~/.ssh/id_rsa.pub > $IMAGEDIR/root/.ssh/authorized_keys
 
 	# install system stuff
 	chroot $IMAGEDIR apt-get --yes --quiet install console-common console-data
