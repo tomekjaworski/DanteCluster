@@ -89,7 +89,7 @@ if [ ! $IMAGEDIR = "False" ] ; then
 
 		debootstrap --variant=minbase --components=main,contrib,non-free --arch=amd64 \
 	    	--include=systemd,systemd-sysv \
-			stretch $IMAGEDIR http://ftp.us.debian.org/debian  | tee  debootstrap.log
+			stretch $IMAGEDIR http://ftp.pl.debian.org/debian  | tee  debootstrap.log
 
 		RETV=$?
 		if [ $RETV -ne 0 ]; then
@@ -100,33 +100,37 @@ if [ ! $IMAGEDIR = "False" ] ; then
 		fi
 	fi
 
+	msg "install /etc/fstab"
 	install files/etc_fstab $IMAGEDIR/etc/fstab
 
 	
 	# copy apt-cacher proxy configuration 
+	msg "install /etc/apt/apt.conf.d/00proxy"
 	install files/etc_apt_apt.d.conf.d_00proxy $IMAGEDIR/etc/apt/apt.conf.d/00proxy	
 
 	# install system localization stuff
+	msg "chroot: apt install locales"
 	chroot $IMAGEDIR apt-get -y install locales
 
 	# install prereq system stuff
+	msg "chroot: apt install dialog netbase"
 	chroot $IMAGEDIR apt-get -y install dialog netbase
 
 
 	# set timezone and keyboard
+	msg "Timezones and keyboard"
 	echo "Europe/Berlin" > $IMAGEDIR/etc/timezone
 	install $IMAGEDIR/usr/share/zoneinfo/Europe/Warsaw $IMAGEDIR/etc/localtime
 	install files/etc_default_keyboard $IMAGEDIR/etc/default/keyboard
 
 	# generate locales
+	msg "Locale generation"
 	echo "en_GB.UTF-8 UTF-8" > $IMAGEDIR/etc/locale.gen
 	chroot $IMAGEDIR locale-gen
 	chroot $IMAGEDIR update-locale LANG="en_GB.UTF-8"
 
 	# allow all users to use /sbin/halt command (via sudo) so that they can reboot the node if needed
-	echo "ALL	ALL=NOPASSWD: /sbin/shutdown, /sbin/halt, /sbin/reboot, /sbin/poweroff" >> \
-		$IMAGEDIR/etc/sudoers
-
+	echo "ALL	ALL=NOPASSWD: /sbin/shutdown, /sbin/halt, /sbin/reboot, /sbin/poweroff" >> $IMAGEDIR/etc/sudoers
 
 	# prevent starting of services
 	echo "prevent starting of daemons"
@@ -250,8 +254,8 @@ if [ ! $IMAGEDIR = "False" ] ; then
 	# prepare PXE
 	INITRD=$(ls $IMAGEDIR/boot/initrd.img*amd64|sort -r|head -1) # copy newest
 	VMINUZ=$(ls $IMAGEDIR/boot/vmlinuz*amd64|sort -r|head -1) # copy newest
-	cp -v $INITRD /srv/tftp/kernel/$(basename ${INITRD}) 
-	cp -v $VMINUZ /srv/tftp/kernel/$(basename ${VMINUZ}) 
+	#cp -v $INITRD /srv/tftp/kernel/$(basename ${INITRD}) 
+	#cp -v $VMINUZ /srv/tftp/kernel/$(basename ${VMINUZ}) 
 	#cp -v $IMAGEDIR/boot/initrd.img-3.2.0-4-amd64 /srv/tftp/initrd.img-3.2.0-4-amd64 
 
 	# copy pre-generated host-keys to the chroot
