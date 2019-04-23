@@ -135,6 +135,13 @@ Address=10.10.0.1/16
 ```
 
 Now update your `initrd` configuration by running `update-initramfs -u` and reboot your machine. New settings will be used during the next boot.
+
+If not, try to enable `networkd` service by running `start` to start and `enable` to start it at boot time:
+```
+systemctl start systemd-networkd
+systemctl enable systemd-networkd
+```
+
 After that check your new settings (`ifconfig -a`) and you should see something like this:
 
 ```
