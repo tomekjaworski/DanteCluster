@@ -65,7 +65,7 @@ To see it, run `ifconfig -a` command. Output should be something like this:
 ```
 enp0s3: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
         inet6 fe80::a00:27ff:fee9:7f29  prefixlen 64  scopeid 0x20<link>
-        ether 08:00:27:e9:7f:29  txqueuelen 1000  (Ethernet)
+        ether 54:e6:fc:80:75:6e  txqueuelen 1000  (Ethernet)
         RX packets 0  bytes 0 (0.0 B)
         RX errors 0  dropped 0  overruns 0  frame 0
         TX packets 8  bytes 648 (648.0 B)
@@ -82,7 +82,7 @@ lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
 
 enp0s8: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
         inet6 fe80::a00:27ff:fe82:2160  prefixlen 64  scopeid 0x20<link>
-        ether 08:00:27:82:21:60  txqueuelen 1000  (Ethernet)
+        ether 14:dd:a9:79:4c:87  txqueuelen 1000  (Ethernet)
         RX packets 173  bytes 16801 (16.4 KiB)
         RX errors 0  dropped 0  overruns 0  frame 0
         TX packets 145  bytes 29013 (28.3 KiB)
@@ -108,7 +108,25 @@ MACAddress=xx:xx:xx:xx:xx:xx
 [Link]
 Name=__name__goes__here__
 ```
-however replace the `xx:xx:xx:xx:xx:xx` and `__name__goes_here__` parts with MAC address correlated with proper `inner`/`outer` name.
+however replace the `xx:xx:xx:xx:xx:xx` and `__name__goes_here__` parts with MAC address correlated with proper `inner`/`outer` name as follows:
+
+* **Outer** interface file `/etc/systemd/network/10-outer.link`:
+```
+[Match]
+MACAddress=14:dd:a9:79:4c:87
+
+[Link]
+Name=outer
+```
+
+* **Inner** interface file `/etc/systemd/network/10-inner.link`:
+```
+[Match]
+MACAddress=54:e6:fc:80:75:6e
+
+[Link]
+Name=inner
+```
 
 Now we should create ISO Layer-3 description for both interfaces with the following files (see `/confs/etc-systemd-network/` in this repo).
 Those files will start outer network interface in DHCP mode and inner as `10.10.0.1`.
@@ -148,7 +166,7 @@ After that check your new settings (`ifconfig -a`) and you should see something 
 inner: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
         inet 10.10.0.1  netmask 255.255.0.0  broadcast 10.10.255.255
         inet6 fe80::a00:27ff:fee9:7f29  prefixlen 64  scopeid 0x20<link>
-        ether 08:00:27:e9:7f:29  txqueuelen 1000  (Ethernet)
+        ether 54:e6:fc:80:75:6e  txqueuelen 1000  (Ethernet)
         RX packets 0  bytes 0 (0.0 B)
         RX errors 0  dropped 0  overruns 0  frame 0
         TX packets 8  bytes 648 (648.0 B)
@@ -157,7 +175,7 @@ inner: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
 outer: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
         inet 192.168.1.108  netmask 255.255.255.0  broadcast 192.168.1.255
         inet6 fe80::a00:27ff:fe82:2160  prefixlen 64  scopeid 0x20<link>
-        ether 08:00:27:82:21:60  txqueuelen 1000  (Ethernet)
+        ether 14:dd:a9:79:4c:87  txqueuelen 1000  (Ethernet)
         RX packets 318  bytes 28663 (27.9 KiB)
         RX errors 0  dropped 0  overruns 0  frame 0
         TX packets 264  bytes 44977 (43.9 KiB)
