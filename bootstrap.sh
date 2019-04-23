@@ -110,9 +110,9 @@ if [ ! $IMAGEDIR = "False" ] ; then
 	echo "iface enp0s3 inet manual" >> $IMAGEDIR/etc/network/interfaces
 	
 	
-	echo "domain cluster" > $IMAGEDIR/etc/resolv.conf
-	echo "search cluster" >> $IMAGEDIR/etc/resolv.conf
-	echo "nameserver 192.168.1.1" >> $IMAGEDIR/etc/resolv.conf
+	# prepare DNS info for nodes and for APT during this installation
+	#cp files/etc_resolv.conf $IMAGEDIR/etc/resolv.conf
+	cp /etc/resolv.conf $IMAGEDIR/etc/resolv.conf
 
 	echo "image" > $IMAGEDIR/etc/debian_chroot
 
