@@ -1,11 +1,23 @@
 {
   "machines": [
-    {
-      "hardware": "11:22:33:44:00:00",
-      "ip": "10.10.0.21",
-      "hostname": "node2",
-      "location": "Shelf 1, column 1"
-    },
+    { "hardware": "90:1b:0e:16:f3:7e", "ip": "10.10.2.11", "hostname": "node1-1", "location": "Shelf 1, column 1" },
+    { "hardware": "90:1b:0e:15:52:f4", "ip": "10.10.2.12", "hostname": "node1-2", "location": "Shelf 1, column 2" },
+    { "hardware": "90:1b:0e:15:53:5a", "ip": "10.10.2.13", "hostname": "node1-3", "location": "Shelf 1, column 3" },
+    { "hardware": "90:1b:0e:16:84:9e", "ip": "10.10.2.14", "hostname": "node1-4", "location": "Shelf 1, column 4" },
+    { "hardware": "90:1b:0e:12:dc:ba", "ip": "10.10.2.15", "hostname": "node1-5", "location": "Shelf 1, column 5" },
+
+    { "hardware": "90:1b:0e:16:1f:44", "ip": "10.10.2.21", "hostname": "node2-1", "location": "Shelf 2, column 1" },
+    { "hardware": "90:1b:0e:15:53:31", "ip": "10.10.2.22", "hostname": "node2-2", "location": "Shelf 2, column 2" },
+    { "hardware": "90:1b:0e:16:1f:ae", "ip": "10.10.2.23", "hostname": "node2-3", "location": "Shelf 2, column 3" },
+    { "hardware": "90:1b:0e:1d:b0:eb", "ip": "10.10.2.24", "hostname": "node2-4", "location": "Shelf 2, column 4" },
+    { "hardware": "90:1b:0e:15:52:6f", "ip": "10.10.2.25", "hostname": "node2-5", "location": "Shelf 2, column 5" },
+
+    { "hardware": "90:1b:0e:13:1f:fb", "ip": "10.10.2.31", "hostname": "node3-1", "location": "Shelf 3, column 1" },
+    { "hardware": "90:1b:0e:16:f3:65", "ip": "10.10.2.32", "hostname": "node3-2", "location": "Shelf 3, column 2" },
+    { "hardware": "90:1b:0e:1d:b2:3d", "ip": "10.10.2.33", "hostname": "node3-3", "location": "Shelf 3, column 3" },
+    { "hardware": "90:1b:0e:16:84:99", "ip": "10.10.2.34", "hostname": "node3-4", "location": "Shelf 3, column 4" },
+    { "hardware": "90:1b:0e:15:52:56", "ip": "10.10.2.35", "hostname": "node3-5", "location": "Shelf 3, column 5" },
+
     {
       "hardware": "11:22:33:44:55:66",
       "ip": "10.10.0.20",
