@@ -32,7 +32,16 @@ function msg () # 1:string
 IMAGEDIR=False
 SKIP_DEBOOTSTRAP=False
 
-while getopts ":d:" opt; do
+# -d <dir> - Install distro in <dir>; Directory should be absolute (e.g. /srv/node)
+# -b - Omit debootstraping stage 
+
+if [ ! `whoami` = "root" ]; then
+	echo "This script should be run only as root"
+	exit 1
+fi
+
+
+while getopts ":d:b" opt; do
 	case  $opt in
 		d)
 		IMAGEDIR=$OPTARG 
@@ -47,6 +56,11 @@ while getopts ":d:" opt; do
 		 #exit 1
 		fi
 	esac
+	case  $opt in
+		b)
+		echo "Omiting Debootstrap stage..."
+		SKIP_DEBOOTSTRAP=True
+	esac
 
 done
 
@@ -60,6 +74,10 @@ done
 
 if [ ! $IMAGEDIR = "False" ] ; then
 
+	rm -rf $IMAGEDIR/etc/fstab
+	rm -rf $IMAGEDIR/etc/mtab
+
+	
 	if [ $SKIP_DEBOOTSTRAP == "False" ] ; then
 		msg "debootstrap to $IMAGEDIR"
 
@@ -236,9 +254,10 @@ if [ ! $IMAGEDIR = "False" ] ; then
 	    install --mode=600 files/ssh/*key $IMAGEDIR/etc/ssh/
 	fi
 
-	
+	echo "### Done."
+
 else
-	echo "Usage: $0 -d <nfsrootdir>"
+	echo "Usage: $0 -d <nfsrootdir> -b"
 	exit 1
 fi
 
