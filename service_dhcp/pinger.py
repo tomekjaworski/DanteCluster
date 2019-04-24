@@ -1,6 +1,14 @@
-import ping3 # pyping needs to be installed manually (is not embedded)
 import time, json
 import threading
+import subprocess
+
+#
+# This script calls 'ping' system command, hence Debian package 'iputils-ping' is needed.
+# I've tested ping3 library, however it has problems with non-existent arp entries -
+#      whole script has to be restarted for the app to "see" new entry.
+#      Should be fixed in free time ;)
+#
+
 
 delays = []
 
@@ -8,10 +16,14 @@ def ReadFile(fileName: str) -> str:
     with open(fileName, "rt") as f:
         return f.read()
 
+def Ping(ip: str) -> bool:
+    res = subprocess.call(['ping','-c','1','-w','1', ip], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return res == 0
+
 def PingWorker(id: int, ip: str):
     while True:
 
-        delay = ping3.ping(ip, unit="ms", timeout=2)
+        delay = Ping(ip)
         delays[id][1] = delay
 
         time.sleep(1)
