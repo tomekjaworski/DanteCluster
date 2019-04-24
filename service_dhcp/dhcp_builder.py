@@ -8,7 +8,7 @@ def ReadFile(fileName: str) -> str:
     with open(fileName, "rt") as f:
         return f.read()
 
-def add_exec_attr(fname: str):
+def SetExecutable(fname: str):
     mode = os.stat(fname).st_mode
     mode |= 0o111
     os.chmod(fname, mode)
@@ -51,6 +51,7 @@ if __name__ == "__main__":
 # Wake UP host {machine['ip']} with hardware addres {machine['hardware']}
 #
 
+echo Waking up node {machine['ip']} with HWAddr {machine['hardware']}...
 etherwake -i inner {machine['hardware']}
 echo Done.
 
@@ -59,7 +60,7 @@ echo Done.
         with open(fname, "wt") as f:
             f.write(content)
 
-        add_exec_attr(fname)
+        SetExecutable(fname)
 
 
     print("Done.")
