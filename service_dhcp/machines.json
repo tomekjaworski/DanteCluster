@@ -16,7 +16,13 @@
     { "hardware": "90:1b:0e:16:f3:65", "ip": "10.10.2.32", "hostname": "node32", "location": "Shelf 3, column 2" },
     { "hardware": "90:1b:0e:1d:b2:3d", "ip": "10.10.2.33", "hostname": "node33", "location": "Shelf 3, column 3" },
     { "hardware": "90:1b:0e:16:84:99", "ip": "10.10.2.34", "hostname": "node34", "location": "Shelf 3, column 4" },
-    { "hardware": "90:1b:0e:15:52:56", "ip": "10.10.2.35", "hostname": "node35", "location": "Shelf 3, column 5" }
+    { "hardware": "90:1b:0e:15:52:56", "ip": "10.10.2.35", "hostname": "node35", "location": "Shelf 3, column 5" },
+
+    { "hardware": "90:1b:0e:16:1f:49", "ip": "10.10.2.41", "hostname": "node41", "location": "Shelf 4, column 1" },
+    { "hardware": "90:1b:0e:16:83:f6", "ip": "10.10.2.42", "hostname": "node42", "location": "Shelf 4, column 2" },
+    { "hardware": "90:1b:0e:15:52:6a", "ip": "10.10.2.43", "hostname": "node43", "location": "Shelf 4, column 3" },
+    { "hardware": "90:1b:0e:16:1f:b6", "ip": "10.10.2.44", "hostname": "node44", "location": "Shelf 4, column 4" },
+    { "hardware": "90:1b:0e:15:54:0b", "ip": "10.10.2.45", "hostname": "node45", "location": "Shelf 4, column 5" }
 
   ]
 }
