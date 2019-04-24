@@ -14,11 +14,17 @@
 #
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-
-
 # exit if any command fails
 set -e
+
+YELLOW='\033[0;33m'	# Yellow
+NOCOLOR='\033[0m'	# No color
+
+function msg () # 1:string
+{
+    echo -e "${YELLOW}$1${NOCOLOR}"
+}
+
 
 # load our library
 . diskless-lib
@@ -26,37 +32,64 @@ set -e
 IMAGEDIR=False
 SKIP_DEBOOTSTRAP=False
 
-while getopts ":d:" opt; do
+# -d <dir> - Install distro in <dir>; Directory should be absolute (e.g. /srv/node)
+# -b - Omit debootstraping stage 
+
+if [ ! `whoami` = "root" ]; then
+	echo "This script should be run only as root"
+	exit 1
+fi
+
+
+while getopts ":d:b" opt; do
 	case  $opt in
 		d)
 		IMAGEDIR=$OPTARG 
-		echo Installing to $IMAGEDIR
+		echo "Installing to $IMAGEDIR..."
 
 		if [ -d $IMAGEDIR ]; then
 		 echo "Directory exists: ${IMAGEDIR}"
-		 echo "aborting ..."
-#		 exit 1
+
+		 echo "Press CTRL+C to break or ENTER to continue..."
+		 read
+		 #echo "aborting ..."
+		 #exit 1
 		fi
+	esac
+	case  $opt in
+		b)
+		echo "Omiting Debootstrap stage..."
+		SKIP_DEBOOTSTRAP=True
 	esac
 
 done
 
-#umount_chroot_image $IMAGEDIR
-#rm -rf ./node/etc/fstab
-#rm -rf ./node/etc/mtab
+#exit 1
+if [ ! -f ~/.ssh/id_rsa.pub ]; then
+	echo "Could not fine file ~/.ssh/id_rsa.pub"
+	echo "Use ssh-keygen and create public key for nodes"
+	exit 1
+fi
 
+#umount_chroot_image $IMAGEDIR
+
+#exit 1
 # include_packages should be one package per column
 # replace "\n" with "," then remove the last "," to feed it to debootstraps --include
 #INCLUDE_PACKAGES=$(awk 1 ORS="," config/include_packages | sed -e 's/,$//' -e 's/\ //')
 
 if [ ! $IMAGEDIR = "False" ] ; then
 
+	rm -rf $IMAGEDIR/etc/fstab
+	rm -rf $IMAGEDIR/etc/mtab
+
+	
 	if [ $SKIP_DEBOOTSTRAP == "False" ] ; then
-		echo "debootstrap to $IMAGEDIR"
+		msg "debootstrap to $IMAGEDIR"
 
 		debootstrap --variant=minbase --components=main,contrib,non-free --arch=amd64 \
 	    	--include=systemd,systemd-sysv \
-			stretch $IMAGEDIR http://ftp.us.debian.org/debian  | tee  debootstrap.log
+			stretch $IMAGEDIR http://ftp.pl.debian.org/debian  | tee  debootstrap.log
 
 		RETV=$?
 		if [ $RETV -ne 0 ]; then
@@ -67,57 +100,62 @@ if [ ! $IMAGEDIR = "False" ] ; then
 		fi
 	fi
 
+	msg "install /etc/fstab"
 	install files/etc_fstab $IMAGEDIR/etc/fstab
 
 	
 	# copy apt-cacher proxy configuration 
+	msg "install /etc/apt/apt.conf.d/00proxy"
 	install files/etc_apt_apt.d.conf.d_00proxy $IMAGEDIR/etc/apt/apt.conf.d/00proxy	
 
 	# install system localization stuff
+	msg "chroot: apt install locales"
 	chroot $IMAGEDIR apt-get -y install locales
 
 	# install prereq system stuff
+	msg "chroot: apt install dialog netbase"
 	chroot $IMAGEDIR apt-get -y install dialog netbase
 
 
 	# set timezone and keyboard
+	msg "Timezones and keyboard"
 	echo "Europe/Berlin" > $IMAGEDIR/etc/timezone
 	install $IMAGEDIR/usr/share/zoneinfo/Europe/Warsaw $IMAGEDIR/etc/localtime
 	install files/etc_default_keyboard $IMAGEDIR/etc/default/keyboard
 
 	# generate locales
+	msg "Locale generation"
 	echo "en_GB.UTF-8 UTF-8" > $IMAGEDIR/etc/locale.gen
 	chroot $IMAGEDIR locale-gen
 	chroot $IMAGEDIR update-locale LANG="en_GB.UTF-8"
 
 	# allow all users to use /sbin/halt command (via sudo) so that they can reboot the node if needed
-	echo "ALL	ALL=NOPASSWD: /sbin/shutdown, /sbin/halt, /sbin/reboot, /sbin/poweroff" >> \
-		$IMAGEDIR/etc/sudoers
-
+	echo "ALL	ALL=NOPASSWD: /sbin/shutdown, /sbin/halt, /sbin/reboot, /sbin/poweroff" >> $IMAGEDIR/etc/sudoers
 
 	# prevent starting of services
-	echo "prevent starting of daemons"
+	msg "Prevent starting of daemons"
 	echo -e "#!/bin/sh\necho Not starting daemon\nexit 101" > $IMAGEDIR/usr/sbin/policy-rc.d
 	chmod 755 $IMAGEDIR/usr/sbin/policy-rc.d
 	
-	echo "prevent installation of suggested/recommended packages"
+	msg "Prevent installation of suggested/recommended packages"
 	echo -e "APT::Install-Recommends \"0\";" > $IMAGEDIR/etc/apt/apt.conf
 	echo -e "APT::Install-Suggests \"0\";" >> $IMAGEDIR/etc/apt/apt.conf
 
 	# networking	
+	msg "Networking"
 	echo "auto lo" > $IMAGEDIR/etc/network/interfaces
 	echo "iface lo inet loopback" >> $IMAGEDIR/etc/network/interfaces
 	echo "iface enp0s3 inet manual" >> $IMAGEDIR/etc/network/interfaces
 	
 	
-	echo "domain cluster" > $IMAGEDIR/etc/resolv.conf
-	echo "search cluster" >> $IMAGEDIR/etc/resolv.conf
-	echo "nameserver 192.168.1.1" >> $IMAGEDIR/etc/resolv.conf
+	# prepare DNS info for nodes and for APT during this installation
+	#cp files/etc_resolv.conf $IMAGEDIR/etc/resolv.conf
+	cp /etc/resolv.conf $IMAGEDIR/etc/resolv.conf
+
 
 	echo "image" > $IMAGEDIR/etc/debian_chroot
 
-
-	echo "mount chroot image"
+	msg "mount chroot image"
 	mount_chroot_image $IMAGEDIR
 	chroot $IMAGEDIR ln -sv /proc/mounts /etc/mtab
 	
@@ -141,7 +179,7 @@ if [ ! $IMAGEDIR = "False" ] ; then
 
 	# password less ssh login for root
 	mkdir -p $IMAGEDIR/root/.ssh
-	cat /root/.ssh/id_rsa.pub > $IMAGEDIR/root/.ssh/authorized_keys
+	cat ~/.ssh/id_rsa.pub > $IMAGEDIR/root/.ssh/authorized_keys
 
 	# install system stuff
 	chroot $IMAGEDIR apt-get --yes --quiet install console-common console-data
@@ -204,7 +242,7 @@ if [ ! $IMAGEDIR = "False" ] ; then
 	# python packages
 #	chroot $IMAGEDIR apt-get -y -q install python-scipy ipython python-zmq
 	
-	echo "umount chroot image"
+	msg "umount chroot image"
 	umount_chroot_image $IMAGEDIR
 
 
@@ -217,8 +255,8 @@ if [ ! $IMAGEDIR = "False" ] ; then
 	# prepare PXE
 	INITRD=$(ls $IMAGEDIR/boot/initrd.img*amd64|sort -r|head -1) # copy newest
 	VMINUZ=$(ls $IMAGEDIR/boot/vmlinuz*amd64|sort -r|head -1) # copy newest
-	cp -v $INITRD /srv/tftp/kernel/$(basename ${INITRD}) 
-	cp -v $VMINUZ /srv/tftp/kernel/$(basename ${VMINUZ}) 
+	#cp -v $INITRD /srv/tftp/kernel/$(basename ${INITRD}) 
+	#cp -v $VMINUZ /srv/tftp/kernel/$(basename ${VMINUZ}) 
 	#cp -v $IMAGEDIR/boot/initrd.img-3.2.0-4-amd64 /srv/tftp/initrd.img-3.2.0-4-amd64 
 
 	# copy pre-generated host-keys to the chroot
@@ -227,9 +265,10 @@ if [ ! $IMAGEDIR = "False" ] ; then
 	    install --mode=600 files/ssh/*key $IMAGEDIR/etc/ssh/
 	fi
 
-	
+	echo "### Done."
+
 else
-	echo "Usage: $0 -d <nfsrootdir>"
+	echo "Usage: $0 -d <nfsrootdir> -b"
 	exit 1
 fi
 

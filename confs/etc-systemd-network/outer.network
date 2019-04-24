@@ -1,0 +1,8 @@
+[Match]
+Name=outer
+
+[Network]
+DHCP=v4
+#Address=10.10.0.1/16
+#Gateway=192.168.0.104
+#DNS=8.8.8.8
