@@ -13,8 +13,6 @@ def SetExecutable(fname: str):
     mode |= 0o111
     os.chmod(fname, mode)
 
-    
-
 
 if __name__ == "__main__":
 
@@ -42,11 +40,27 @@ if __name__ == "__main__":
         f.write(output)
 
     #
-    # Prepare etherware scripts for all nodes
+    # Prepare wakeup and poweroff scripts for all nodes
     #
 
+
+    wakeup_all = f"""#!/bin/bash
+#
+# Wake UP ALL hosts
+#
+
+"""
+
+    poweroff_all = f"""#!/bin/bash
+#
+# Powering OFF ALL hosts
+#
+
+"""
+
+
     for machine in hardware["machines"]:
-        content = f"""#!/bin/bash
+        wakeup_single = f"""#!/bin/bash
 #
 # Wake UP host {machine['ip']} with hardware addres {machine['hardware']}
 #
@@ -56,11 +70,47 @@ etherwake -i inner {machine['hardware']}
 echo Done.
 
 """
+        wakeup_all += f"""echo Waking up node {machine['ip']} with HWAddr {machine['hardware']}...
+etherwake -i inner {machine['hardware']}
+"""
+        poweroff_all += f"""echo Powering down node {machine['ip']} with HWAddr {machine['hardware']}...
+ssh {machine['ip']} "shutdown -P now" &
+"""        
+
         fname = "wake_" + machine["hostname"] + ".sh"
         with open(fname, "wt") as f:
-            f.write(content)
+            f.write(wakeup_single)
 
         SetExecutable(fname)
+
+
+        poweroff_single = f"""#!/bin/bash
+#
+# Power off host {machine['ip']} with hardware addres {machine['hardware']}
+#
+
+echo Powering down node {machine['ip']} with HWAddr {machine['hardware']}...
+ssh {machine['ip']} "shutdown -P now" &
+echo Done.
+
+"""
+        fname = "poweroff_" + machine["hostname"] + ".sh"
+        with open(fname, "wt") as f:
+            f.write(poweroff_single)
+
+        SetExecutable(fname)
+
+    #
+    # Save WHOLE-CLUSTER operations...
+    #
+
+    with open("wake_all.sh", "wt") as f:
+        f.write(wakeup_all)
+    with open("poweroff_all.sh", "wt") as f:
+        f.write(poweroff_all)
+
+    SetExecutable("wake_all.sh")
+    SetExecutable("poweroff_all.sh")
 
 
     print("Done.")
