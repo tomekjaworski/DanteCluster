@@ -28,6 +28,10 @@ def PingWorker(id: int, ip: str):
 
         time.sleep(1)
 
+def ClearScreen():
+    res = subprocess.call(['clear'])
+    return res == 0
+
 if __name__ == "__main__":
 
    
@@ -50,6 +54,7 @@ if __name__ == "__main__":
     print("Pinging threads created...")
 
     while True:
+        ClearScreen()
 
         print("===============")
         for i in range(0, id):
