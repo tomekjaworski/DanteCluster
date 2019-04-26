@@ -1,4 +1,5 @@
 /dhcpd.conf
 /wake_*.sh
+/poweroff_*.sh
 
 
