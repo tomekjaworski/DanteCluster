@@ -33,7 +33,7 @@ IMAGEDIR=False
 SKIP_DEBOOTSTRAP=False
 
 # -d <dir> - Install distro in <dir>; Directory should be absolute (e.g. /srv/node)
-# -b - Omit debootstraping stage 
+# -b - Omit debootstraping stage
 
 if [ ! `whoami` = "root" ]; then
 	echo "This script should be run only as root"
@@ -44,7 +44,7 @@ fi
 while getopts ":d:b" opt; do
 	case  $opt in
 		d)
-		IMAGEDIR=$OPTARG 
+		IMAGEDIR=$OPTARG
 		echo "Installing to $IMAGEDIR..."
 
 		if [ -d $IMAGEDIR ]; then
@@ -83,7 +83,7 @@ if [ ! $IMAGEDIR = "False" ] ; then
 	rm -rf $IMAGEDIR/etc/fstab
 	rm -rf $IMAGEDIR/etc/mtab
 
-	
+
 	if [ $SKIP_DEBOOTSTRAP == "False" ] ; then
 		msg "debootstrap to $IMAGEDIR"
 
@@ -103,10 +103,10 @@ if [ ! $IMAGEDIR = "False" ] ; then
 	msg "install /etc/fstab"
 	install files/etc_fstab $IMAGEDIR/etc/fstab
 
-	
-	# copy apt-cacher proxy configuration 
+
+	# copy apt-cacher proxy configuration
 	msg "install /etc/apt/apt.conf.d/00proxy"
-	install files/etc_apt_apt.d.conf.d_00proxy $IMAGEDIR/etc/apt/apt.conf.d/00proxy	
+	install files/etc_apt_apt.d.conf.d_00proxy $IMAGEDIR/etc/apt/apt.conf.d/00proxy
 
 	# install system localization stuff
 	msg "chroot: apt install locales"
@@ -130,24 +130,24 @@ if [ ! $IMAGEDIR = "False" ] ; then
 	chroot $IMAGEDIR update-locale LANG="en_GB.UTF-8"
 
 	# allow all users to use /sbin/halt command (via sudo) so that they can reboot the node if needed
-	echo "ALL	ALL=NOPASSWD: /sbin/shutdown, /sbin/halt, /sbin/reboot, /sbin/poweroff" >> $IMAGEDIR/etc/sudoers
+	echo "ALL	ALL=NOPASSWD: /sbin/shutdown, /sbin/reboot, /sbin/poweroff" >> $IMAGEDIR/etc/sudoers
 
 	# prevent starting of services
 	msg "Prevent starting of daemons"
 	echo -e "#!/bin/sh\necho Not starting daemon\nexit 101" > $IMAGEDIR/usr/sbin/policy-rc.d
 	chmod 755 $IMAGEDIR/usr/sbin/policy-rc.d
-	
+
 	msg "Prevent installation of suggested/recommended packages"
 	echo -e "APT::Install-Recommends \"0\";" > $IMAGEDIR/etc/apt/apt.conf
 	echo -e "APT::Install-Suggests \"0\";" >> $IMAGEDIR/etc/apt/apt.conf
 
-	# networking	
+	# networking
 	msg "Networking"
 	echo "auto lo" > $IMAGEDIR/etc/network/interfaces
 	echo "iface lo inet loopback" >> $IMAGEDIR/etc/network/interfaces
-	echo "iface enp0s3 inet manual" >> $IMAGEDIR/etc/network/interfaces
-	
-	
+	echo "iface enp0s3 inet dhcp" >> $IMAGEDIR/etc/network/interfaces
+
+
 	# prepare DNS info for nodes and for APT during this installation
 	#cp files/etc_resolv.conf $IMAGEDIR/etc/resolv.conf
 	cp /etc/resolv.conf $IMAGEDIR/etc/resolv.conf
@@ -158,7 +158,7 @@ if [ ! $IMAGEDIR = "False" ] ; then
 	msg "mount chroot image"
 	mount_chroot_image $IMAGEDIR
 	chroot $IMAGEDIR ln -sv /proc/mounts /etc/mtab
-	
+
 	# kernel and initramfs
 	chroot $IMAGEDIR apt-get -y install udev linux-image-amd64 firmware-linux initramfs-tools
 	chroot $IMAGEDIR apt-get -y install aufs-tools
@@ -192,7 +192,7 @@ if [ ! $IMAGEDIR = "False" ] ; then
 
 	# install network tools
 	chroot $IMAGEDIR apt-get --yes install net-tools iputils-ping
-	
+
 
 	# preseed NIS
 	# configure NIS clients
@@ -207,7 +207,7 @@ if [ ! $IMAGEDIR = "False" ] ; then
 
 	# configure NTP
 #	install files/etc_ntp.conf $IMAGEDIR/etc/ntp.conf
-	
+
 	# configure rsyslog for remote logging
 #	install files/etc_rsyslog.conf $IMAGEDIR/etc/rsyslog.conf
 
@@ -226,7 +226,7 @@ if [ ! $IMAGEDIR = "False" ] ; then
 #		create-munge-key
 #	fi
 #	install --mode=600 --group=$MUNGE_GID --owner=$MUNGE_UID  /etc/munge/munge.key $IMAGEDIR/etc/munge/
-	
+
 	# configure slurm
 #	[ -f /etc/slurm-llnl/slurm.conf ] && cp -v /etc/slurm-llnl/slurm.conf $IMAGEDIR/etc/slurm-llnl/
 
@@ -236,12 +236,12 @@ if [ ! $IMAGEDIR = "False" ] ; then
 	# gromacs
 #	chroot $IMAGEDIR apt-get -y -q install gromacs-openmpi gromacs-data gromacs-dev
 
-	# development 
+	# development
 #	chroot $IMAGEDIR apt-get -y -q install build-essential make  gfortran libopenmpi-dev
-	
+
 	# python packages
 #	chroot $IMAGEDIR apt-get -y -q install python-scipy ipython python-zmq
-	
+
 	msg "umount chroot image"
 	umount_chroot_image $IMAGEDIR
 
@@ -251,13 +251,13 @@ if [ ! $IMAGEDIR = "False" ] ; then
 	pwck -R $IMAGEDIR -s
 	grpck -R $IMAGEDIR -s
 	echo "" >  $IMAGEDIR/etc/hostname
-	
+
 	# prepare PXE
 	INITRD=$(ls $IMAGEDIR/boot/initrd.img*amd64|sort -r|head -1) # copy newest
 	VMINUZ=$(ls $IMAGEDIR/boot/vmlinuz*amd64|sort -r|head -1) # copy newest
-	#cp -v $INITRD /srv/tftp/kernel/$(basename ${INITRD}) 
-	#cp -v $VMINUZ /srv/tftp/kernel/$(basename ${VMINUZ}) 
-	#cp -v $IMAGEDIR/boot/initrd.img-3.2.0-4-amd64 /srv/tftp/initrd.img-3.2.0-4-amd64 
+	#cp -v $INITRD /srv/tftp/kernel/$(basename ${INITRD})
+	#cp -v $VMINUZ /srv/tftp/kernel/$(basename ${VMINUZ})
+	#cp -v $IMAGEDIR/boot/initrd.img-3.2.0-4-amd64 /srv/tftp/initrd.img-3.2.0-4-amd64
 
 	# copy pre-generated host-keys to the chroot
 	if [ -d files/ssh ]; then
