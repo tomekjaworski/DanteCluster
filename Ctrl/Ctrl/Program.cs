@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Renci.SshNet;
 
 
 namespace Ctrl
@@ -82,6 +83,23 @@ namespace Ctrl
 
         public void Run()
         {
+            AuthenticationMethod[] auth = new AuthenticationMethod[]
+            {
+                //TODO: replace login/password authorization method with public keys; to be done at the final stages of cluster configuration process
+                new PasswordAuthenticationMethod("testlogin", "testpassword"), 
+            };
+            ConnectionInfo ci = new ConnectionInfo("10.24.188.189", 22, auth[0].Username, auth);
+
+            SshClient cli = new SshClient(ci);
+            
+            cli.Connect();
+
+            SshCommand cmd = cli.CreateCommand("sleep 10");
+            cmd.CommandTimeout = TimeSpan.FromSeconds(5);
+
+            Task.Factory.FromAsync((callback, state) => cmd.BeginExecute(callback, state), cmd.EndExecute, null);
+
+            //output.
 
 
             Task.Run(() => Pinger());
