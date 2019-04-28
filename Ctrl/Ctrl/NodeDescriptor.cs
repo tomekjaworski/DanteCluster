@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using Newtonsoft.Json;
 
-public class Node
+public class NodeDescriptor
 {
     [JsonProperty("hardware")]
     public HardwareAddress Hardware { get; set; }

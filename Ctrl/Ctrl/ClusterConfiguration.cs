@@ -3,5 +3,5 @@
 public class ClusterConfiguration
 {
     [JsonProperty("machines")]
-    public Node[] Nodes { get; set; }
+    public NodeDescriptor[] NodesDescriptor { get; set; }
 }
