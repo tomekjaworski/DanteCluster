@@ -13,21 +13,15 @@ using Newtonsoft.Json.Linq;
 namespace Ctrl
 {
 
-    public class NodePingStatus {
-        public IPAddress IP { get; private set; }
+    public class NodeStatus
+    {
+        public IPAddress IP { get; }
 
-        public NodePingStatus(IPAddress ip)
-        {
-            this.IP = ip;
-        }
+        public PingStatus PingStatus { get;  }
 
-        public void SetICMPStatus(IPStatus replyStatus)
+        public NodeStatus(IPAddress ip)
         {
-            lock (this)
-            {
-                if (replyStatus == IPStatus.Success)
-                    this.responseseInARow++;
-            }
+            this.PingStatus = new PingStatus(ip);
         }
     }
 
@@ -45,7 +39,7 @@ namespace Ctrl
     {
         private ClusterConfiguration config;
         private CancellationTokenSource cts;
-        private Dictionary<IPAddress, NodePingStatus> pingStatuses;
+        private Dictionary<IPAddress, NodeStatus> nodeStatuses;
 
         public ClusterController(string configFileName)
         {
@@ -59,9 +53,9 @@ namespace Ctrl
             this.config = JsonConvert.DeserializeObject<ClusterConfiguration>(json, settings);
 
             this.cts = new CancellationTokenSource();
-            this.pingStatuses = new Dictionary<IPAddress, NodePingStatus>();
+            this.nodeStatuses = new Dictionary<IPAddress, NodeStatus>();
             foreach (Node node in this.config.Nodes)
-                this.pingStatuses.Add(node.IP, new NodePingStatus(node.IP));
+                this.nodeStatuses.Add(node.IP, new NodeStatus(node.IP));
         }
 
         private async Task Pinger()
@@ -81,15 +75,14 @@ namespace Ctrl
                 PingReply[] replies = await Task.WhenAll(tasks);
 
                 foreach (PingReply reply in replies)
-                {
-                    this.pingStatuses[reply.Address].SetICMPStatus(reply.Status);
-                }
+                    this.nodeStatuses[reply.Address].PingStatus.SetICMPStatus(reply.Status);
 
             }
         }
 
         public void Run()
         {
+
 
             Task.Run(() => Pinger());
 
