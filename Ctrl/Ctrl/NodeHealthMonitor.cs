@@ -98,7 +98,7 @@ namespace Ctrl
 
                 //
                 // Get CPU information
-                Regex lscpuRegex = new Regex("^(?<key>[^:]+)?[:](?<value>.+)$",
+                Regex lscpuRegex = new Regex("^(?<key>[^:]+?)[:](?<value>.+)$",
                     RegexOptions.Compiled | RegexOptions.Singleline);
                 commandResponse = (await ssh.RunCommandAsync("lscpu", 5000));
 
@@ -115,6 +115,23 @@ namespace Ctrl
                 // Unix timestamp
                 commandResponse = (await ssh.RunCommandAsync("date +%s", 5000)).Trim();
                 UInt64 nodeTimestamp = UInt64.Parse(commandResponse.Trim());
+
+                // /proc/stat
+                commandResponse = (await ssh.RunCommandAsync("cat /proc/stat", 5000)).Trim();
+                Regex procStatRegex = new Regex("^(?<key>[a-zA-Z0-9]+)[ ](?<value>.+)$",
+                    RegexOptions.Compiled | RegexOptions.Singleline);
+                Dictionary<string, UInt64[]> procStats = commandResponse
+                    .Split("\n", StringSplitOptions.RemoveEmptyEntries)
+                    .Select(row => procStatRegex.Match(row.Trim()))
+                    .Where(m => m.Success)
+                    .ToDictionary(
+                        x => x.Groups["key"].Value.Trim(),
+                        v => v.Groups["value"].Value
+                            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                            .Select(UInt64.Parse).ToArray()
+                    );
+
+
 
                 //
                 // Get virtual memory statistics
@@ -134,7 +151,7 @@ namespace Ctrl
                       
 
 
-
+/*
                 //
                 // Get CPU dynamic state information
                 Regex hhmmssRegex = new Regex("^[0-9]{2}[:][0-9]{2}[:][0-9]{2}",
@@ -163,7 +180,7 @@ Linux 4.9.0-8-amd64 (node11)    28/04/19        _x86_64_        (4 CPU)
                     .Select(r => r.Substring(2 + 1 + 2 + 1 + 2).Trim())
                     .Select(r => r.Split(' ', StringSplitOptions.RemoveEmptyEntries))
                     .ToArray();
-
+                    */
 
                 Console.WriteLine("????");
 
