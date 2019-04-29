@@ -27,7 +27,7 @@ namespace Ctrl
     {
         private ClusterConfiguration config;
         private CancellationTokenSource cts;
-        private Dictionary<IPAddress, NodeHealthMonitor> nodeStatuses;
+        private List<NodeHealthMonitor> nodes;
 
         public ClusterController(string configFileName)
         {
@@ -41,9 +41,9 @@ namespace Ctrl
             this.config = JsonConvert.DeserializeObject<ClusterConfiguration>(json, settings);
 
             this.cts = new CancellationTokenSource();
-            this.nodeStatuses = new Dictionary<IPAddress, NodeHealthMonitor>();
+            this.nodes = new List<NodeHealthMonitor>();
             foreach (NodeDescriptor node in this.config.NodesDescriptor)
-                this.nodeStatuses.Add(node.IP, new NodeHealthMonitor(node));
+                this.nodes.Add(new NodeHealthMonitor(node));
         }
 
         private void Pinger()
@@ -101,7 +101,7 @@ namespace Ctrl
                */
 
             List<Task> tasks = new List<Task>();
-            foreach (NodeHealthMonitor nhm in this.nodeStatuses.Values)
+            foreach (NodeHealthMonitor nhm in this.nodes)
             {
                 Task task = nhm.RunMonitorAsync(this.cts.Token);
                 tasks.Add(task);

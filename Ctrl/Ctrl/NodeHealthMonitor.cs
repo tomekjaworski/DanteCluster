@@ -91,18 +91,18 @@ namespace Ctrl
 
                 //
                 // Test host name
-                string receivedHostname = (await ssh.RunCommandAsync("hostname", 5000)).Trim();
-                bool hostnameOk = receivedHostname == this.descriptor.Hostname;
+                string commandResponse = (await ssh.RunCommandAsync("hostname", 5000)).Trim();
+                bool hostnameOk = commandResponse == this.descriptor.Hostname;
                 Console.WriteLine(
-                    $"HOSTNAME: expected={this.descriptor.Hostname}; recieved={receivedHostname}; correct={(hostnameOk ? "YES" : "NO")}");
+                    $"HOSTNAME: expected={this.descriptor.Hostname}; recieved={commandResponse}; correct={(hostnameOk ? "YES" : "NO")}");
 
                 //
                 // Get CPU information
                 Regex lscpuRegex = new Regex("^(?<key>[^:]+)?[:](?<value>.+)$",
                     RegexOptions.Compiled | RegexOptions.Singleline);
-                string lscpu = (await ssh.RunCommandAsync("lscpu", 5000));
+                commandResponse = (await ssh.RunCommandAsync("lscpu", 5000));
 
-                Dictionary<string, string> cpuinfo = lscpu.Split("\n", StringSplitOptions.RemoveEmptyEntries)
+                Dictionary<string, string> cpuinfo = commandResponse.Split("\n", StringSplitOptions.RemoveEmptyEntries)
                     .Select(row => lscpuRegex.Match(row.Trim()))
                     .Where(m => m.Success)
                     .Select(m => new {Key = m.Groups["key"].Value.Trim(), Value = m.Groups["value"].Value.Trim()})
@@ -110,13 +110,38 @@ namespace Ctrl
                 this.cpuInfo = cpuinfo;
 
 
+
+                //
+                // Unix timestamp
+                commandResponse = (await ssh.RunCommandAsync("date +%s", 5000)).Trim();
+                UInt64 nodeTimestamp = UInt64.Parse(commandResponse.Trim());
+
+                //
+                // Get virtual memory statistics
+                commandResponse = (await ssh.RunCommandAsync("vmstat -sSB", 5000)).Trim();
+                Dictionary<string, UInt64> vmStatistics = commandResponse
+                    .Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(x => x.Trim())
+                    .ToDictionary(
+                        (string key) =>
+                        {
+                            key = key.Substring(key.IndexOf(' ') + 1).Trim().ToLower();
+                            if (key.StartsWith("b "))
+                                key = key.Substring(2).Trim();
+                            return key;
+                        },
+                        x => UInt64.Parse(x.Substring(0, x.IndexOf(' ')).Trim()));
+                      
+
+
+
                 //
                 // Get CPU dynamic state information
                 Regex hhmmssRegex = new Regex("^[0-9]{2}[:][0-9]{2}[:][0-9]{2}",
                     RegexOptions.Compiled | RegexOptions.Singleline);
 
-                string mpstat = (await ssh.RunCommandAsync("mpstat -P ALL -u -I SUM", 5000)).Trim();
-                mpstat = @"
+                commandResponse = (await ssh.RunCommandAsync("mpstat -P ALL -u -I SUM", 5000)).Trim();
+                commandResponse = @"
 Linux 4.9.0-8-amd64 (node11)    28/04/19        _x86_64_        (4 CPU)
 
 17:30:18     CPU    %usr   %nice    %sys %iowait    %irq   %soft  %steal  %guest  %gnice   %idle
@@ -133,7 +158,7 @@ Linux 4.9.0-8-amd64 (node11)    28/04/19        _x86_64_        (4 CPU)
 17:30:18       2      1.67
 17:30:18       3      1.41
 ";
-                string[][] rows = mpstat.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                string[][] rows = commandResponse.Split('\n', StringSplitOptions.RemoveEmptyEntries)
                     .Where(r => hhmmssRegex.IsMatch(r))
                     .Select(r => r.Substring(2 + 1 + 2 + 1 + 2).Trim())
                     .Select(r => r.Split(' ', StringSplitOptions.RemoveEmptyEntries))
