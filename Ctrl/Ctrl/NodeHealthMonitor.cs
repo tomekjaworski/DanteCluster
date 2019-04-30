@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -42,8 +43,7 @@ namespace Ctrl
             }
         }
 
-        private SshClient ssh;
-        private NodeDescriptor descriptor;
+     private NodeDescriptor descriptor;
         private InternalStateDescriptor isd;
 
         public IPAddress IP => this.descriptor.IP;
@@ -102,212 +102,215 @@ namespace Ctrl
                 lock (this.isd)
                     this.isd.state = MonitorState.EstablishingSSHConnection;
 
+                IPAddress ip = IPAddress.Parse("10.10.10.10");
+                ip = this.IP;
                 Console.WriteLine($"Connecting to SSH server {this.IP}:22...");
-                ConnectionInfo ci = new ConnectionInfo(this.IP.ToString(), 22, auth[0].Username, auth);
-                SshClient ssh = new SshClient(ci);
+                ConnectionInfo ci = new ConnectionInfo(ip.ToString(), 22, auth[0].Username, auth);
 
-                await Task.Run(() => ssh.Connect(), ct);
-
-                // ===========================
-                // Now we are connected and can start monitoring the node in two stages:
-                // 1. Get information once per connection
-                // 2. Get informations in a loop
-
-                //
-                // Test host name
-                string commandResponse = (await ssh.RunCommandAsync("hostname", 5000)).Trim();
-                bool hostnameOk = commandResponse == this.descriptor.Hostname;
-                Console.WriteLine(
-                    $"HOSTNAME: expected={this.descriptor.Hostname}; recieved={commandResponse}; correct={(hostnameOk ? "YES" : "NO")}");
-
-                //
-                // Get CPU information
-                try
+                using (SshClient ssh = new SshClient(ci))
                 {
-                    Regex lscpuRegex = new Regex("^(?<key>[^:]+?)[:](?<value>.+)$",
-                        RegexOptions.Compiled | RegexOptions.Singleline);
-                    commandResponse = (await ssh.RunCommandAsync("lscpu", 5000));
 
-                    Dictionary<string, string> cpuinfo = commandResponse
-                        .Split("\n", StringSplitOptions.RemoveEmptyEntries)
-                        .Select(row => lscpuRegex.Match(row.Trim()))
-                        .Where(m => m.Success)
-                        .Select(m => new {Key = m.Groups["key"].Value.Trim(), Value = m.Groups["value"].Value.Trim()})
-                        .ToDictionary(v => v.Key, v => v.Value);
-                    lock (this.isd)
-                        this.isd.cpuInfo = cpuinfo;
-
-
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                }
-
-
-                //
-                // Unix timestamp
-                try
-                {
-                    commandResponse = (await ssh.RunCommandAsync("date +%s", 5000)).Trim();
-                    lock (this.isd)
-                        this.isd.statsNodeTimestamp = UInt64.Parse(commandResponse.Trim());
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                }
-
-                //
-                // /proc/stat
-                try
-                {
-                    commandResponse = (await ssh.RunCommandAsync("cat /proc/stat", 5000)).Trim();
-                    Regex procStatRegex = new Regex("^(?<key>[a-zA-Z0-9]+)[ ](?<value>.+)$",
-                        RegexOptions.Compiled | RegexOptions.Singleline);
-
-                    Dictionary<string, UInt64[]> dict = commandResponse
-                        .Split("\n", StringSplitOptions.RemoveEmptyEntries)
-                        .Select(row => procStatRegex.Match(row.Trim()))
-                        .Where(m => m.Success)
-                        .ToDictionary(
-                            x => x.Groups["key"].Value.Trim(),
-                            v => v.Groups["value"].Value
-                                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                                .Select(UInt64.Parse).ToArray()
-                        );
-
-                    lock (this.isd)
+                    try
                     {
-                        this.isd.cpuAllStatistics = dict["cpu"];
+                        await Task.Run(() => ssh.Connect(), ct);
+                    }
+                    catch (SocketException ex)
+                    {
+                        //
+                        Console.WriteLine("....");
+
+                        continue;
                     }
 
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                }
+                    // ===========================
+                    // Now we are connected and can start monitoring the node in two stages:
+                    // 1. Get information once per connection
+                    // 2. Get informations in a loop
 
-                // /proc/loadavg
-                try
-                {
-                    commandResponse = (await ssh.RunCommandAsync("cat /proc/loadavg", 5000)).Trim();
-                    Regex loadavgRegex = new Regex(
-                        "^(?<l1>[0-9]+[.][0-9]+)\\s*(?<l5>[0-9]+[.][0-9]+)\\s*(?<l15>[0-9]+[.][0-9]+)\\s*(?<rp>[0-9]+)[/]*(?<trp>[0-9]+)\\s*(?<lastpid>[0-9]+)$",
-                        RegexOptions.Compiled | RegexOptions.Singleline);
+                    //
+                    // Test host name
+                    string commandResponse = (await ssh.RunCommandAsync("hostname", 5000)).Trim();
+                    bool hostnameOk = commandResponse == this.descriptor.Hostname;
+                    Console.WriteLine(
+                        $"HOSTNAME: expected={this.descriptor.Hostname}; recieved={commandResponse}; correct={(hostnameOk ? "YES" : "NO")}");
 
-                    Match m = loadavgRegex.Match(commandResponse);
-
-                    lock (this.isd)
+                    //
+                    // Get CPU information
+                    try
                     {
-                        this.isd.load1min = double.Parse(m.Groups["l1"].Value, CultureInfo.InvariantCulture);
-                        this.isd.load5min = double.Parse(m.Groups["l5"].Value, CultureInfo.InvariantCulture);
-                        this.isd.load15min = double.Parse(m.Groups["l15"].Value, CultureInfo.InvariantCulture);
-                        this.isd.runningProcesses = int.Parse(m.Groups["rp"].Value);
-                        this.isd.availableProcesses = int.Parse(m.Groups["trp"].Value);
-                        this.isd.lastPid = int.Parse(m.Groups["lastpid"].Value);
+                        Regex lscpuRegex = new Regex("^(?<key>[^:]+?)[:](?<value>.+)$",
+                            RegexOptions.Compiled | RegexOptions.Singleline);
+                        commandResponse = (await ssh.RunCommandAsync("lscpu", 5000));
+
+                        Dictionary<string, string> cpuinfo = commandResponse
+                            .Split("\n", StringSplitOptions.RemoveEmptyEntries)
+                            .Select(row => lscpuRegex.Match(row.Trim()))
+                            .Where(m => m.Success)
+                            .Select(m => new
+                                {Key = m.Groups["key"].Value.Trim(), Value = m.Groups["value"].Value.Trim()})
+                            .ToDictionary(v => v.Key, v => v.Value);
+                        lock (this.isd)
+                            this.isd.cpuInfo = cpuinfo;
+
+
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex.Message);
                     }
 
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                }
 
-
-                //
-                // /proc/uptime
-                try
-                {
-
-                    // 
-                    commandResponse = (await ssh.RunCommandAsync("cat /proc/uptime", 5000)).Trim();
-
-                    double[] values = commandResponse
-                        .Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                        .Select(x => double.Parse(x, CultureInfo.InvariantCulture)).ToArray();
-
-                    lock (this.isd)
+                    //
+                    // Unix timestamp
+                    try
                     {
-                        this.isd.machineUptime = values[0];
-                        this.isd.cpuTotalIdleTime = values[1];
+                        commandResponse = (await ssh.RunCommandAsync("date +%s", 5000)).Trim();
+                        lock (this.isd)
+                            this.isd.statsNodeTimestamp = UInt64.Parse(commandResponse.Trim());
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex.Message);
                     }
 
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                }
+                    while (!ct.IsCancellationRequested)
+                    {
 
-                //
-                // Get virtual memory statistics
-                try
-                {
+                        DateTime begin = DateTime.Now;
+                        Console.WriteLine(begin);
 
-                    commandResponse = (await ssh.RunCommandAsync("vmstat -sSB", 5000)).Trim();
+                        //
+                        // /proc/stat
+                        try
+                        {
+                            commandResponse = (await ssh.RunCommandAsync("cat /proc/stat", 5000)).Trim();
+                            Regex procStatRegex = new Regex("^(?<key>[a-zA-Z0-9]+)[ ](?<value>.+)$",
+                                RegexOptions.Compiled | RegexOptions.Singleline);
 
-                    Dictionary<string, UInt64> dict = commandResponse
-                        .Split('\n', StringSplitOptions.RemoveEmptyEntries)
-                        .Select(x => x.Trim())
-                        .ToDictionary(
-                            (string key) =>
+                            Dictionary<string, UInt64[]> dict = commandResponse
+                                .Split("\n", StringSplitOptions.RemoveEmptyEntries)
+                                .Select(row => procStatRegex.Match(row.Trim()))
+                                .Where(m => m.Success)
+                                .ToDictionary(
+                                    x => x.Groups["key"].Value.Trim(),
+                                    v => v.Groups["value"].Value
+                                        .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                                        .Select(UInt64.Parse).ToArray()
+                                );
+
+                            lock (this.isd)
                             {
-                                key = key.Substring(key.IndexOf(' ') + 1).Trim().ToLower();
-                                if (key.StartsWith("b "))
-                                    key = key.Substring(2).Trim();
-                                return key;
-                            },
-                            x => UInt64.Parse(x.Substring(0, x.IndexOf(' ')).Trim()));
+                                this.isd.cpuAllStatistics = dict["cpu"];
+                            }
 
-                    lock (this.isd)
-                    {
-                        this.isd.memoryTotal = dict["total memory"];
-                        this.isd.memoryUsed = dict["used memory"];
-                        this.isd.memoryFree = dict["free memory"];
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine(ex.Message);
+                            break;
+                        }
 
-                        this.isd.memorySwapTotal = dict["total swap"];
-                        this.isd.memorySwapUsed = dict["used swap"];
-                        this.isd.memorySwapFree = dict["free swap"];
+                        // /proc/loadavg
+                        try
+                        {
+                            commandResponse = (await ssh.RunCommandAsync("cat /proc/loadavg", 5000)).Trim();
+                            Regex loadavgRegex = new Regex(
+                                "^(?<l1>[0-9]+[.][0-9]+)\\s*(?<l5>[0-9]+[.][0-9]+)\\s*(?<l15>[0-9]+[.][0-9]+)\\s*(?<rp>[0-9]+)[/]*(?<trp>[0-9]+)\\s*(?<lastpid>[0-9]+)$",
+                                RegexOptions.Compiled | RegexOptions.Singleline);
+
+                            Match m = loadavgRegex.Match(commandResponse);
+
+                            lock (this.isd)
+                            {
+                                this.isd.load1min = double.Parse(m.Groups["l1"].Value, CultureInfo.InvariantCulture);
+                                this.isd.load5min = double.Parse(m.Groups["l5"].Value, CultureInfo.InvariantCulture);
+                                this.isd.load15min = double.Parse(m.Groups["l15"].Value, CultureInfo.InvariantCulture);
+                                this.isd.runningProcesses = int.Parse(m.Groups["rp"].Value);
+                                this.isd.availableProcesses = int.Parse(m.Groups["trp"].Value);
+                                this.isd.lastPid = int.Parse(m.Groups["lastpid"].Value);
+                            }
+
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine(ex.Message);
+                            break;
+                        }
+
+
+                        //
+                        // /proc/uptime
+                        try
+                        {
+
+                            // 
+                            commandResponse = (await ssh.RunCommandAsync("cat /proc/uptime", 5000)).Trim();
+
+                            double[] values = commandResponse
+                                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                                .Select(x => double.Parse(x, CultureInfo.InvariantCulture)).ToArray();
+
+                            lock (this.isd)
+                            {
+                                this.isd.machineUptime = values[0];
+                                this.isd.cpuTotalIdleTime = values[1];
+                            }
+
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine(ex.Message);
+                            break;
+                        }
+
+                        //
+                        // Get virtual memory statistics
+                        try
+                        {
+
+                            commandResponse = (await ssh.RunCommandAsync("vmstat -sSB", 5000)).Trim();
+
+                            Dictionary<string, UInt64> dict = commandResponse
+                                .Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                                .Select(x => x.Trim())
+                                .ToDictionary(
+                                    (string key) =>
+                                    {
+                                        key = key.Substring(key.IndexOf(' ') + 1).Trim().ToLower();
+                                        if (key.StartsWith("b "))
+                                            key = key.Substring(2).Trim();
+                                        return key;
+                                    },
+                                    x => UInt64.Parse(x.Substring(0, x.IndexOf(' ')).Trim()));
+
+                            lock (this.isd)
+                            {
+                                this.isd.memoryTotal = dict["total memory"];
+                                this.isd.memoryUsed = dict["used memory"];
+                                this.isd.memoryFree = dict["free memory"];
+
+                                this.isd.memorySwapTotal = dict["total swap"];
+                                this.isd.memorySwapUsed = dict["used swap"];
+                                this.isd.memorySwapFree = dict["free swap"];
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine(ex.Message);
+                            break;
+                        }
+
+
+                        // wait up to 10 seconds (count in previous SSH calls)
+                        TimeSpan ts = DateTime.Now - begin;
+                        int delta = (int)Math.Max(0, 10 * 1000 - ts.TotalMilliseconds);
+                        await Task.Delay(delta);
+
+
                     }
+
+                    Console.WriteLine("????");
                 }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                }
-
-
-/*
-                //
-                // Get CPU dynamic state information
-                Regex hhmmssRegex = new Regex("^[0-9]{2}[:][0-9]{2}[:][0-9]{2}",
-                    RegexOptions.Compiled | RegexOptions.Singleline);
-
-                commandResponse = (await ssh.RunCommandAsync("mpstat -P ALL -u -I SUM", 5000)).Trim();
-                commandResponse = @"
-Linux 4.9.0-8-amd64 (node11)    28/04/19        _x86_64_        (4 CPU)
-
-17:30:18     CPU    %usr   %nice    %sys %iowait    %irq   %soft  %steal  %guest  %gnice   %idle
-17:30:18     all    0.00    0.00    0.01    0.02    0.00    0.01    0.00    0.00    0.00   99.96
-17:30:18       0    0.00    0.00    0.01    0.00    0.00    0.04    0.00    0.00    0.00   99.95
-17:30:18       1    0.00    0.00    0.01    0.06    0.00    0.00    0.00    0.00    0.00   99.93
-17:30:18       2    0.00    0.00    0.01    0.01    0.00    0.00    0.00    0.00    0.00   99.98
-17:30:18       3    0.00    0.00    0.01    0.01    0.00    0.00    0.00    0.00    0.00   99.98
-
-17:30:18     CPU    intr/s
-17:30:18     all     39.26
-17:30:18       0     32.71
-17:30:18       1      3.47
-17:30:18       2      1.67
-17:30:18       3      1.41
-";
-                string[][] rows = commandResponse.Split('\n', StringSplitOptions.RemoveEmptyEntries)
-                    .Where(r => hhmmssRegex.IsMatch(r))
-                    .Select(r => r.Substring(2 + 1 + 2 + 1 + 2).Trim())
-                    .Select(r => r.Split(' ', StringSplitOptions.RemoveEmptyEntries))
-                    .ToArray();
-                    */
-
-                Console.WriteLine("????");
 
             }
 
