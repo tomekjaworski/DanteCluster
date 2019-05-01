@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using NLog;
 using Renci.SshNet;
 
 
@@ -29,21 +30,37 @@ namespace Ctrl
         private CancellationTokenSource cts;
         private List<NodeHealthMonitor> nodes;
 
+        private ILogger log;
+
         public ClusterController(string configFileName)
         {
-            string json = File.ReadAllText(configFileName);
+            this.log = LogManager.GetLogger("cnc");
 
             var settings = new JsonSerializerSettings();
             settings.Converters.Add(new IPAddressConverter());
             settings.Converters.Add(new JsonHardwareAddressConverter());
             settings.Formatting = Formatting.Indented;
 
-            this.config = JsonConvert.DeserializeObject<ClusterConfiguration>(json, settings);
+            try
+            {
+                
+                string json = File.ReadAllText(configFileName);
+                this.config = JsonConvert.DeserializeObject<ClusterConfiguration>(json, settings);
+
+                log.Info($"Cluster Hardware Descriptor file load successful [{configFileName}]");
+            } catch(Exception ex)
+            {
+                log.Fatal(ex, $"Error loading Cluster Hardware Descriptor file [{configFileName}]");
+                return; // we have nothing more to do
+            }
 
             this.cts = new CancellationTokenSource();
             this.nodes = new List<NodeHealthMonitor>();
             foreach (NodeDescriptor node in this.config.NodesDescriptor)
+            {
+                log.Info($"Adding node {node.Hostname} as {node.IP} on {node.Hardware}; Location: {node.Location}");
                 this.nodes.Add(new NodeHealthMonitor(node));
+            }
         }
 
         private void Pinger()
