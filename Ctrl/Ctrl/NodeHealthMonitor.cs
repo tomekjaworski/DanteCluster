@@ -8,7 +8,9 @@ using System.Net.Sockets;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using NLog;
 using Renci.SshNet;
+using Renci.SshNet.Common;
 
 namespace Ctrl
 {
@@ -43,8 +45,9 @@ namespace Ctrl
             }
         }
 
-     private NodeDescriptor descriptor;
+        private NodeDescriptor descriptor;
         private InternalStateDescriptor isd;
+        private ILogger log;
 
         public IPAddress IP => this.descriptor.IP;
 
@@ -52,38 +55,56 @@ namespace Ctrl
         {
             this.descriptor = descriptor;
             this.isd = new InternalStateDescriptor();
+            this.log = LogManager.GetLogger(descriptor.Hostname);
         }
 
 
         public async Task RunMonitorAsync(CancellationToken ct)
         {
+            log.Info($"Starting health monitor for node {this.descriptor.IP}");
 
             while (!ct.IsCancellationRequested)
             {
-                Ping pingService = new Ping();
                 int successCounter = 0;
 
                 lock (this.isd)
                     this.isd.state = MonitorState.WaitingForPingResponses;
 
-                int npings = 5;
+                int pingCount = 5;
                 int timeout = 2000;
+                int pingInterval = 1000;
                 // wait for N consecutive ping replies
-                while (successCounter < npings && !ct.IsCancellationRequested) //todo config
-                {
-                    PingReply pingReply = await pingService.SendPingAsync(this.IP, timeout); // todo config
-                    Console.WriteLine(
-                        $"Pinging {this.IP}; result={pingReply.Status}, RTT={pingReply.RoundtripTime} ms");
 
-                    if (pingReply.Status == IPStatus.Success)
+                log.Info(
+                    $"Waiting for {pingCount} consecutive successful pings with timeout {timeout} and interval {pingInterval}");
+                while (successCounter < pingCount && !ct.IsCancellationRequested) //todo config
+                {
+                    try
                     {
-                        successCounter++;
-                        await Task.Delay(1000, ct);
+                        Ping pingService = new Ping();
+                        PingReply pingReply = await pingService.SendPingAsync(this.IP, timeout); // todo config
+
+                        if (pingReply.Status == IPStatus.Success)
+                        {
+                            log.Info(
+                                $"Got response form {this.IP}; result={pingReply.Status}, RTT={pingReply.RoundtripTime} ms");
+                            successCounter++;
+                            await Task.Delay(pingInterval, ct);
+                        }
+                        else
+                        {
+                            log.Info($"No response form {this.IP}; result={pingReply.Status}");
+                            successCounter = 0;
+                        }
+
+
                     }
-                    else
+                    catch (SystemException ex)
                     {
+                        log.Error(ex, $"Error while pinging node {this.descriptor.Hostname}");
                         successCounter = 0;
                     }
+
                 }
 
                 if (ct.IsCancellationRequested)
@@ -104,7 +125,7 @@ namespace Ctrl
 
                 IPAddress ip = IPAddress.Parse("10.10.10.10");
                 ip = this.IP;
-                Console.WriteLine($"Connecting to SSH server {this.IP}:22...");
+                log.Info($"Connecting node via SSH {this.IP}:22...");
                 ConnectionInfo ci = new ConnectionInfo(ip.ToString(), 22, auth[0].Username, auth);
 
                 using (SshClient ssh = new SshClient(ci))
@@ -113,12 +134,12 @@ namespace Ctrl
                     try
                     {
                         await Task.Run(() => ssh.Connect(), ct);
+                        log.Info(
+                            $"Connected. Host: {ssh.ConnectionInfo.Host}, server: {ssh.ConnectionInfo.ServerVersion}, username: {ssh.ConnectionInfo.Username}.");
                     }
                     catch (SocketException ex)
                     {
-                        //
-                        Console.WriteLine("....");
-
+                        log.Error(ex, "Error while connecting node via SSH");
                         continue;
                     }
 
@@ -129,10 +150,23 @@ namespace Ctrl
 
                     //
                     // Test host name
-                    string commandResponse = (await ssh.RunCommandAsync("hostname", 5000)).Trim();
-                    bool hostnameOk = commandResponse == this.descriptor.Hostname;
-                    Console.WriteLine(
-                        $"HOSTNAME: expected={this.descriptor.Hostname}; recieved={commandResponse}; correct={(hostnameOk ? "YES" : "NO")}");
+                    try
+                    {
+                        log.Info("Running 'hostname'...");
+                        string commandResponse = (await ssh.RunCommandAsync("hostname", 5000)).Trim();
+                        bool hostnameOk = commandResponse == this.descriptor.Hostname;
+                        string msg =
+                            $"HOSTNAME: expected={this.descriptor.Hostname}; recieved={commandResponse}; correct={(hostnameOk ? "YES" : "NO")}";
+                        if (hostnameOk)
+                            log.Info(msg);
+                        else
+                            log.Warn(msg);
+                    }
+                    catch (Exception ex)
+                    {
+                        log.Error(ex, "Error while running command");
+                        continue;
+                    }
 
                     //
                     // Get CPU information
@@ -140,7 +174,9 @@ namespace Ctrl
                     {
                         Regex lscpuRegex = new Regex("^(?<key>[^:]+?)[:](?<value>.+)$",
                             RegexOptions.Compiled | RegexOptions.Singleline);
-                        commandResponse = (await ssh.RunCommandAsync("lscpu", 5000));
+
+                        log.Info("Running 'lscpu'...");
+                        string commandResponse = (await ssh.RunCommandAsync("lscpu", 5000));
 
                         Dictionary<string, string> cpuinfo = commandResponse
                             .Split("\n", StringSplitOptions.RemoveEmptyEntries)
@@ -149,14 +185,16 @@ namespace Ctrl
                             .Select(m => new
                                 {Key = m.Groups["key"].Value.Trim(), Value = m.Groups["value"].Value.Trim()})
                             .ToDictionary(v => v.Key, v => v.Value);
+
                         lock (this.isd)
                             this.isd.cpuInfo = cpuinfo;
-
+                        log.Trace($"Got {cpuinfo.Count} entries");
 
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine(ex.Message);
+                        log.Error(ex, "Error while running command");
+                        continue;
                     }
 
 
@@ -164,26 +202,28 @@ namespace Ctrl
                     // Unix timestamp
                     try
                     {
-                        commandResponse = (await ssh.RunCommandAsync("date +%s", 5000)).Trim();
+                        log.Info("Running 'date +%s'...");
+                        string commandResponse = (await ssh.RunCommandAsync("date +%s", 5000)).Trim();
                         lock (this.isd)
                             this.isd.statsNodeTimestamp = UInt64.Parse(commandResponse.Trim());
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine(ex.Message);
+                        log.Error(ex, "Error while running command");
+                        continue;
                     }
 
+                    log.Info("Entering node health monitoringl loop...");
                     while (!ct.IsCancellationRequested)
                     {
 
                         DateTime begin = DateTime.Now;
-                        Console.WriteLine(begin);
 
                         //
                         // /proc/stat
                         try
                         {
-                            commandResponse = (await ssh.RunCommandAsync("cat /proc/stat", 5000)).Trim();
+                            string commandResponse = (await ssh.RunCommandAsync("cat /proc/stat", 5000)).Trim();
                             Regex procStatRegex = new Regex("^(?<key>[a-zA-Z0-9]+)[ ](?<value>.+)$",
                                 RegexOptions.Compiled | RegexOptions.Singleline);
 
@@ -206,14 +246,14 @@ namespace Ctrl
                         }
                         catch (Exception ex)
                         {
-                            Console.WriteLine(ex.Message);
+                            log.Error(ex, "Error while running command 'cat /proc/stat'");
                             break;
                         }
 
                         // /proc/loadavg
                         try
                         {
-                            commandResponse = (await ssh.RunCommandAsync("cat /proc/loadavg", 5000)).Trim();
+                            string commandResponse = (await ssh.RunCommandAsync("cat /proc/loadavg", 5000)).Trim();
                             Regex loadavgRegex = new Regex(
                                 "^(?<l1>[0-9]+[.][0-9]+)\\s*(?<l5>[0-9]+[.][0-9]+)\\s*(?<l15>[0-9]+[.][0-9]+)\\s*(?<rp>[0-9]+)[/]*(?<trp>[0-9]+)\\s*(?<lastpid>[0-9]+)$",
                                 RegexOptions.Compiled | RegexOptions.Singleline);
@@ -233,7 +273,7 @@ namespace Ctrl
                         }
                         catch (Exception ex)
                         {
-                            Console.WriteLine(ex.Message);
+                            log.Error(ex, "Error while running command 'cat /proc/loadavg'");
                             break;
                         }
 
@@ -244,7 +284,7 @@ namespace Ctrl
                         {
 
                             // 
-                            commandResponse = (await ssh.RunCommandAsync("cat /proc/uptime", 5000)).Trim();
+                            string commandResponse = (await ssh.RunCommandAsync("cat /proc/uptime", 5000)).Trim();
 
                             double[] values = commandResponse
                                 .Split(' ', StringSplitOptions.RemoveEmptyEntries)
@@ -259,7 +299,7 @@ namespace Ctrl
                         }
                         catch (Exception ex)
                         {
-                            Console.WriteLine(ex.Message);
+                            log.Error(ex, "Error while running command 'cat /proc/uptime'");
                             break;
                         }
 
@@ -268,7 +308,7 @@ namespace Ctrl
                         try
                         {
 
-                            commandResponse = (await ssh.RunCommandAsync("vmstat -sSB", 5000)).Trim();
+                            string commandResponse = (await ssh.RunCommandAsync("vmstat -sSB", 5000)).Trim();
 
                             Dictionary<string, UInt64> dict = commandResponse
                                 .Split('\n', StringSplitOptions.RemoveEmptyEntries)
@@ -296,27 +336,28 @@ namespace Ctrl
                         }
                         catch (Exception ex)
                         {
-                            Console.WriteLine(ex.Message);
+                            log.Error(ex, "Error while running command 'vmstat -sSB'");
                             break;
                         }
 
 
                         // wait up to 10 seconds (count in previous SSH calls)
                         TimeSpan ts = DateTime.Now - begin;
-                        int delta = (int)Math.Max(0, 10 * 1000 - ts.TotalMilliseconds);
+                        int delta = (int) Math.Max(0, 10 * 1000 - ts.TotalMilliseconds);
                         await Task.Delay(delta);
 
 
                     }
 
-                    Console.WriteLine("????");
+                    log.Info($"Exited node health monitoring loop (ct.IsCancellationRequested={ct.IsCancellationRequested}");
                 }
 
             }
 
+            log.Info($"Health monitor for node {this.descriptor.IP} stopped.");
+
             lock (this)
                 this.isd.state = MonitorState.Terminated;
-
         }
 
     }
