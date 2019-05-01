@@ -18,7 +18,7 @@ namespace Ctrl
     {
         static void Main(string[] args)
         {
-           
+
             ClusterController ctrl = new ClusterController(@"..\..\..\..\..\service_dhcp\machines.json");
             ctrl.Run();
         }
@@ -63,38 +63,6 @@ namespace Ctrl
             }
         }
 
-        private void Pinger()
-        {
-
-
-            /*
-            List<Task<PingReply>> tasks = new List<Task<PingReply>>();
-
-            await Task.Run(() => X());
-
-            while (!this.cts.IsCancellationRequested)
-            {
-                tasks.Clear();
-                foreach (NodeDescriptor node in this.config.NodesDescriptor)
-                {
-                    Ping ping = new Ping();
-                    Task<PingReply> pr = ping.SendPingAsync(node.IP, 2000);
-                    tasks.Add(pr);
-                }
-
-                PingReply[] replies = await Task.WhenAll(tasks);
-
-                foreach (PingReply reply in replies)
-                    this.nodeStatuses[reply.Address].PingStatus.SetICMPStatus(reply.Status);
-
-            }*/
-
-        }
-
-        void X()
-        {
-            Thread.Sleep(10000);
-        }
         public void Run()
         {
             /*   AuthenticationMethod[] auth = new AuthenticationMethod[]
