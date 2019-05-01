@@ -1,23 +1,17 @@
-#!/bin/bash
+#!/bin/sh
 #
+
+set -e
 
 echo "#####################################################"
 echo "##                                                 ##"
 echo "## Dante Cluster :: TFTP virtualization            ##"
 echo "## Author: Tomasz Jaworski, 2019                   ##"
+echo "## Maintainer: Sebastian Bąkała, 2019              ##"
 echo "##                                                 ##"
 echo "#####################################################"
 
-set -e
+echo "$@"
 
-service rsyslog start
-service rsyslog status
-
-#
 echo Running TFTP server...
-/usr/sbin/in.tftpd --listen --user tftp --address 0.0.0.0:69 --secure /srv/tftp -vv
-
-echo Running tail on /var/log/syslog...
-tail -f /var/log/syslog
-
-
+exec in.tftpd "$@" 1>/logs/out.log 2>/logs/err.log
