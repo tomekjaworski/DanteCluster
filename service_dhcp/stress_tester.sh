@@ -1,7 +1,7 @@
 #!/bin/bash
 
 scr=("poweroff_all.sh" "wake_all.sh")
-sleep=90
+sleep=(90 180)
 times=30
 [[ ! -z $1 ]] && times="$1"
 [[ ! -z $2 ]] && sleep=("$2" "$((2 * $2))")
