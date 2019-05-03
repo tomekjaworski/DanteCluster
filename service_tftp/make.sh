@@ -1,9 +1,11 @@
 #!/bin/bash
 
-ln  ../nfsroot/boot/vmlinuz-4.9.0-8-amd64 vmlinuz-4.9.0-8-amd64
-ln  ../nfsroot/boot/initrd.img-4.9.0-8-amd64 initrd.img-4.9.0-8-amd64
+readonly TFTP_FILES_VOL="tftp_files"
+readonly FILEPATH="../nfsroot/boot"
 
-docker build --tag=dante_tftp .
+echo "Making docker volume with tftp files"
+docker run --rm -v $(pwd)/$FILEPATH:/files --mount source=$TFTP_FILES_VOL,destination=/files alpine:3.9 bin/sh -c "ls -la /files"
 
-unlink vmlinuz-4.9.0-8-amd64
-unlink initrd.img-4.9.0-8-amd64
+echo "Building docker tftp server."
+docker build -t tftp -f Dockefile .
+
