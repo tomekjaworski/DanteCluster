@@ -18,5 +18,5 @@
 `docker build -t tftp -f Dockefile .`
 ### Use docker volume - its more secure than bind mount
 #t## Simple run:
-`docker run -d --name tftp_server --mount source=tftp_log_vol,destination=/logs,readonly -p 69:69/udp tftp`
+`docker run -d --name tftp_server --mount source=tftp_log_vol,destination=/logs -p 69:69/udp tftp`
 
