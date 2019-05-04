@@ -1,9 +1,16 @@
 #!/bin/bash
 
-ln  ../nfsroot/boot/vmlinuz-4.9.0-8-amd64 vmlinuz-4.9.0-8-amd64
-ln  ../nfsroot/boot/initrd.img-4.9.0-8-amd64 initrd.img-4.9.0-8-amd64
+readonly TFTP_FILES_VOL="tftp_files"
+readonly FILEPATH="../nfsroot/boot"
 
-docker build --tag=dante_tftp .
+echo "Making docker volume with tftp files"
+docker run --rm -v $(pwd)/$FILEPATH:/files0 --mount source=$TFTP_FILES_VOL,destination=/files1 alpine:3.9 cp -r /files0 /files1 1>/dev/null
 
-unlink vmlinuz-4.9.0-8-amd64
-unlink initrd.img-4.9.0-8-amd64
+echo "Building docker tftp server."
+docker build -t tftp -f Dockerfile . 1>/dev/null
+
+echo "Remove dangling docker images."
+docker rmi $(docker images -f "dangling=true" -q) 1>/dev/null
+
+echo "Print info about newly created tftp image"
+docker image ls | grep -w "^tftp"

@@ -24,5 +24,5 @@ COPY ./files/stage1/start.sh /bin/start
 RUN apk add --no-cache tftp-hpa \
     && adduser -D tftp \
     && mkdir /logs
-ENTRYPOINT ["/bin/start"]
-CMD ["--ipv4", "--foreground", "--verbose", "--listen", "--user", "tftp", "--secure", "${TFTP_DIR}"]
+ENTRYPOINT ["start"]
+CMD ["--ipv4", "--foreground", "--verbose", "--listen", "--user", "tftp"]
