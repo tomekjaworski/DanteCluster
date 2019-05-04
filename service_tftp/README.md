@@ -33,7 +33,7 @@ docker run -d \
 docker run -d \
     --name tftp_server \
     --mount source=tftp_log_vol,destination=/logs \
-    --mount source=tftp_files,destination=/tftpboot,readonly \
+    --mount source=tftp_files,destination=/var/tftpboot,readonly \
     --env TFTP_DIR=/var/tftpboot \
     -p 69:69/udp \
     tftp
