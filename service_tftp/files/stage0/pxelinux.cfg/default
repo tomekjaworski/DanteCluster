@@ -10,10 +10,9 @@ LABEL main-menu
 
 LABEL dante-node
     MENU DEFAULT
-    MENU LABEL DANTE: vmlinuz-4.9.0-8-amd64
-    KERNEL vmlinuz-4.9.0-8-amd64
-    APPEND boot=aufs nfsroot=10.10.0.1:/srv/dc/nfsroot ro initrd=initrd.img-4.9.0-8-amd64 vga=775 panic=10
-
+    MENU LABEL DANTE: vmlinuz
+    KERNEL kern/vmlinuz
+    APPEND boot=aufs nfsroot=10.10.0.1:/srv/dc/nfsroot ro initrd=kern/initrd.img vga=775 panic=10
 
 LABEL disk
     MENU LABEL disk

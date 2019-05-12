@@ -25,4 +25,4 @@ RUN apk add --no-cache tftp-hpa \
     && adduser -D tftp \
     && mkdir /logs
 ENTRYPOINT ["start"]
-CMD ["--ipv4", "--foreground", "--verbose", "--listen", "--user", "tftp"]
+CMD ["--ipv4", "--foreground", "-vvv", "--user", "tftp"]
