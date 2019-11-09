@@ -1,3 +1,6 @@
+#!/usr/bin/python3
+#
+
 import time, json
 import threading
 import subprocess
