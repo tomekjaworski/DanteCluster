@@ -21,6 +21,7 @@ if __name__ == "__main__":
     # Read hardware description file
     #
     hardware = json.loads(ReadFile("machines.json"))
+    os.makedirs("scripts",exist_ok=True)
 
 
     for machine in hardware["machines"]:
@@ -77,7 +78,7 @@ etherwake -i inner {machine['hardware']}
 ssh {machine['ip']} "shutdown -P now" &
 """        
 
-        fname = "wake_" + machine["hostname"] + ".sh"
+        fname = "scripts/wake_" + machine["hostname"] + ".sh"
         with open(fname, "wt") as f:
             f.write(wakeup_single)
 
@@ -94,7 +95,7 @@ ssh {machine['ip']} "shutdown -P now" &
 echo Done.
 
 """
-        fname = "poweroff_" + machine["hostname"] + ".sh"
+        fname = "scripts/poweroff_" + machine["hostname"] + ".sh"
         with open(fname, "wt") as f:
             f.write(poweroff_single)
 
@@ -104,13 +105,13 @@ echo Done.
     # Save WHOLE-CLUSTER operations...
     #
 
-    with open("wake_all.sh", "wt") as f:
+    with open("scripts/wake_all.sh", "wt") as f:
         f.write(wakeup_all)
-    with open("poweroff_all.sh", "wt") as f:
+    with open("scripts/poweroff_all.sh", "wt") as f:
         f.write(poweroff_all)
 
-    SetExecutable("wake_all.sh")
-    SetExecutable("poweroff_all.sh")
+    SetExecutable("scripts/wake_all.sh")
+    SetExecutable("scripts/poweroff_all.sh")
 
 
     print("Done.")

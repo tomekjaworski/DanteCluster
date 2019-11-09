@@ -34,7 +34,7 @@ RUN mkdir /srv/tftp/pxelinux.cfg
 COPY default /srv/tftp/pxelinux.cfg/default
 
 WORKDIR /srv
-COPY start.sh .
+COPY internal_start.sh .
 
-ENTRYPOINT ["./start.sh"]
+ENTRYPOINT ["./internal_start.sh"]
 

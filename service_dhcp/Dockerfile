@@ -4,7 +4,7 @@
 # 
 
 # Use Debian 9.8 Stretch and Python 3.6.8
-FROM debian:9.8-slim
+#FROM debian:9.8-slim
 FROM python:3.6.8-slim-stretch
 
 LABEL maintainer="Tomasz Jaworski <tjaworski@iis.p.lodz.pl>"
@@ -32,8 +32,8 @@ COPY dhcpd.conf.j2template /srv/dhcpd.conf.j2template
 COPY machines.json /srv/machines.json
 
 
-COPY start.sh /srv/start.sh
+COPY internal_start.sh /srv/internal_start.sh
 
 
-CMD ["/bin/bash","/srv/start.sh"]
+CMD ["/bin/bash","/srv/internal_start.sh"]
 
